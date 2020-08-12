@@ -1,0 +1,11 @@
+{
+  "python.pythonPath": "/usr/bin/python3",
+  "explorer.confirmDragAndDrop": false,
+  "editor.formatOnType": true,
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "black",
+  "python.linting.pylintArgs": [
+    "--generated-members=numpy.*,torch.*,cv2.*",
+    "--disable=C0111,C0115,C0116"
+  ]
+}
