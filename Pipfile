@@ -1,0 +1,35 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+ipykernel = "*"
+
+[packages]
+bcrypt = "==3.1.7"
+cryptography = "==2.9.2"
+kaggle = "==1.5.6"
+matplotlib = "==3.1.2"
+numpy = "==1.17.4"
+opencv-python = "==4.3.0.36"
+pandas = "==1.0.4"
+pylint = "==2.5.3"
+scikit-image = "==0.16.2"
+scikit-learn = "==0.23.1"
+scikit-optimize = "==0.7.4"
+scipy = "==1.4.1"
+seaborn = "==0.10.0"
+six = "==1.13.0"
+tokenizers = "==0.7.0"
+torch = "==1.6.0"
+torchvision = "==0.6.1"
+tqdm = "==4.46.1"
+transformers = "==2.11.0"
+xgboost = "==0.90"
+Flask = "==1.1.1"
+SQLAlchemy = "==1.3.18"
+
+[requires]
+python_version = "3.6"
