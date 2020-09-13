@@ -1,12 +1,12 @@
 {
   "python.pythonPath": "/usr/bin/python3",
-  "python.venvPath": "~/.local/share/virtualenvs/gancrypto-6QH13Skv/bin/python3",
+  "python.venvPath": "/home/zrthxn/.local/share/virtualenvs",
   "explorer.confirmDragAndDrop": false,
   "editor.formatOnType": true,
   "editor.formatOnSave": true,
   "python.formatting.provider": "black",
   "python.linting.pylintArgs": [
     "--generated-members=numpy.*,torch.*,cv2.*",
-    "--disable=C0111,C0115,C0116,unused-import"
+    "--disable=C0111,C0115,C0116,unused-import,trailing-newlines,trailing-whitespace,unused-argument,bad-indentation"
   ]
 }
