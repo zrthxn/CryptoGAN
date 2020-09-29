@@ -7,6 +7,6 @@
   "python.formatting.provider": "black",
   "python.linting.pylintArgs": [
     "--generated-members=numpy.*,torch.*,cv2.*",
-    "--disable=C0111,C0115,C0116,unused-import,trailing-newlines,trailing-whitespace,unused-argument,bad-indentation"
+    "--disable=C0111,C0115,C0116,unused-import,unused-argument,trailing-newlines,trailing-whitespace,bad-indentation,invalid-name"
   ]
 }
