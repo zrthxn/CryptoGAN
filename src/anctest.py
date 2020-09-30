@@ -18,19 +18,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-# %%
-# Data and preprocessing
-
-BLOCKSIZE = 16
-
-KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
-PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(4096)]
-
-def recalc_key():
-  KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
-
-def recalc_plain():
-  PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(4096)]
+VERSION = 1
 
 # %%
 # Define networks
@@ -66,7 +54,7 @@ class KeyholderNetwork(nn.Module):
     inputs = torch.sigmoid(inputs)
     
     inputs = self.conv4(inputs)
-    inputs = torch.tanh(inputs)
+    inputs = F.hardsigmoid(inputs)
 
     return inputs.view(self.blocksize)
 
@@ -104,11 +92,26 @@ class AttackerNetwork(nn.Module):
     inputs = torch.sigmoid(inputs)
     
     inputs = self.conv4(inputs)
-    inputs = torch.tanh(inputs)
+    inputs = F.hardsigmoid(inputs)
 
     return inputs.view(self.blocksize)
 
 
+# %%
+# Data and preprocessing
+
+BLOCKSIZE = 16
+
+KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
+PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(2000)]
+
+def recalc_key():
+  KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
+
+def recalc_plain():
+  PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(2000)]
+
+  
 # %%
 # Initialize Networks
 
@@ -116,14 +119,15 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-lossfn = nn.L1Loss()
-# lossfn = nn.L2Loss()
-# lossfn = nn.BCELoss()
+# lossfn = nn.L1Loss()
+# lossfn = nn.MSELoss()
+lossfn = nn.BCELoss()
 
 opt_alice = torch.optim.Adam(alice.parameters(), lr=0.0008)
 opt_bob = torch.optim.Adam(bob.parameters(), lr=0.0008)
 opt_eve = torch.optim.Adam(eve.parameters(), lr=0.0008)
 
+VERSION += 1
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -147,7 +151,12 @@ eve_running_loss = []
 bob_bits_err = []
 eve_bits_err = []
 
-BATCHES = 6
+BATCHES = 2
+
+# Hyperparams
+BETA = 1.0
+GAMMA = 2.0
+DECISION_BOUNDARY = 0.5
 
 for E in range(BATCHES):
   for P in PLAIN:
@@ -167,14 +176,14 @@ for E in range(BATCHES):
     bob_err = 0
     eve_err = 0
     for b in range(BLOCKSIZE):
-      if (P[b] == 0 and Pb[b] > 0):
+      if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
         bob_err += 1
-      if (P[b] == 1 and Pb[b] < 1):
+      if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
         bob_err += 1
 
-      if (P[b] == 0 and Pe[b] > 0):
+      if (P[b] == 0 and Pe[b] >= DECISION_BOUNDARY):
         eve_err += 1
-      if (P[b] == 1 and Pe[b] < 1):
+      if (P[b] == 1 and Pe[b] < DECISION_BOUNDARY):
         eve_err += 1
 
     bob_bits_err.append(bob_err)
@@ -184,7 +193,7 @@ for E in range(BATCHES):
     eve_reconst_loss = lossfn(Pe, P)
 
     # Linear loss
-    alice_loss = bob_reconst_loss - eve_reconst_loss
+    alice_loss = (BETA * bob_reconst_loss) - (GAMMA * eve_reconst_loss)
 
     # Quad loss
     # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
@@ -222,29 +231,37 @@ for E in range(BATCHES):
 
 print('Finished Training')
 
-
 # %%
 # Plots
 sns.set_style('whitegrid')
-sm = 1800
+sm = 300
+
+# fig, [ax, bx] = plt.subplot(1, 1)
+
+SAVEPLOT = True
+# Turn this line on and off to control plot saving
+SAVEPLOT = False
 
 plt.plot(trendline(alice_running_loss, sm))
 plt.plot(trendline(bob_running_loss, sm))
 plt.plot(trendline(eve_running_loss, sm))
+plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
-plt.ylabel('Loss Trend')
-plt.title(f'Training - {BLOCKSIZE} bit block, var key, Linear lossfn')
-plt.legend(['Alice', 'Bob', 'Eve'])
+plt.ylabel(f'Loss Trend (Sf {sm})')
+plt.title(f'Training - {BLOCKSIZE} bits, var Key, BCE loss, B={BETA} G={GAMMA}')
+if SAVEPLOT:
+  plt.savefig(f'../models/graphs/loss_{BATCHES}E{len(PLAIN)}v{VERSION}.png', dpi=400)
 plt.show()
 
+# plt.plot(bob_bits_err)
 plt.plot(trendline(bob_bits_err, sm))
 plt.plot(trendline(eve_bits_err, sm))
+plt.legend(['Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
-plt.ylabel('Bit error trend')
-plt.title(f'Error - {BLOCKSIZE} bit block, var key, Linear lossfn')
-plt.legend(['Bob', 'Eve'])
+plt.ylabel(f'Bit error trend (Sf {sm})')
+plt.title(f'Error - {BLOCKSIZE} bits, var Key, BCE loss, B={BETA} G={GAMMA}')
+if SAVEPLOT:
+  plt.savefig(f'../models/graphs/error_{BATCHES}E{len(PLAIN)}v{VERSION}.png', dpi=400)
 plt.show()
-
-
 # %%
 # Evaluation
