@@ -38,6 +38,7 @@ Abadi, M.; Andersen, D.G. Learning to protect communications with adversarial ne
     - B and G control how much Alice is affected by Bob and Eve respectively
     - With B=2.0 G=1.0, Alice's loss shows high correlation with Bob
     - With B=1.0 G=2.0, Alice's loss shows high correlation with Eve
+    - Bit error stagnated around 8 bits which is bad
 
   ### Things to Try
   - Introduce weights to losses, B and G

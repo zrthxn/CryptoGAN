@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-VERSION = 1
+VERSION = 12
 
 # %%
 # Define networks
@@ -253,7 +253,6 @@ if SAVEPLOT:
   plt.savefig(f'../models/graphs/loss_{BATCHES}E{len(PLAIN)}v{VERSION}.png', dpi=400)
 plt.show()
 
-# plt.plot(bob_bits_err)
 plt.plot(trendline(bob_bits_err, sm))
 plt.plot(trendline(eve_bits_err, sm))
 plt.legend(['Bob', 'Eve'], loc='upper right')
