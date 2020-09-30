@@ -7,6 +7,7 @@ This will help me keep a record of the things I have done and have to do.
 [Learning to protect communications with adversarial neural cryptography](https://arxiv.org/pdf/1610.06918.pdf)<br>
 Abadi, M.; Andersen, D.G. Learning to protect communications with adversarial neural cryptography. arXiv 2016, arXiv:1610.06918.
 
+
   ### Observations
   - Quad loss suggested by paper gives worse results than linear
   - MSE Loss gives better results than L1
@@ -14,10 +15,8 @@ Abadi, M.; Andersen, D.G. Learning to protect communications with adversarial ne
   - HardSigmoid in last layer instead of tanh, combined with
     BCE loss looks promising
 
-  ### Things I've tried
-  The following things have been tried with a small set
-  of data to test the implementation.
 
+  ### Things I've tried
   - Changing the batch size, [200, 2000, 4000]
     - Batches above 2000 give diminishing returns
     - Below 1000 network doesn't train well
@@ -39,6 +38,7 @@ Abadi, M.; Andersen, D.G. Learning to protect communications with adversarial ne
     - With B=2.0 G=1.0, Alice's loss shows high correlation with Bob
     - With B=1.0 G=2.0, Alice's loss shows high correlation with Eve
     - Bit error stagnated around 8 bits which is bad
+
 
   ### Things to Try
   - Introduce weights to losses, B and G

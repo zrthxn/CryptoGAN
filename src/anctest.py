@@ -103,13 +103,15 @@ class AttackerNetwork(nn.Module):
 BLOCKSIZE = 16
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
-PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(2000)]
+PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(4096)]
+
+BATCHES = 6
 
 def recalc_key():
   KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 
 def recalc_plain():
-  PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(2000)]
+  PLAIN = [[random.randint(0, 1) for x in range(BLOCKSIZE)] for i in range(4096)]
 
   
 # %%
@@ -151,21 +153,15 @@ eve_running_loss = []
 bob_bits_err = []
 eve_bits_err = []
 
-BATCHES = 2
-
 # Hyperparams
 BETA = 1.0
-GAMMA = 2.0
+GAMMA = 1.5
 DECISION_BOUNDARY = 0.5
 
 for E in range(BATCHES):
   for P in PLAIN:
     P = torch.Tensor(P)
     K = torch.Tensor(KEY)
-
-    # Recalculate key after every 100 items
-    # if (len(alice_running_loss) / 100 == 0):
-    #   recalc_key()
 
     cipher = alice(torch.cat([P, K], dim=0))
     cipher.detach()
@@ -198,9 +194,9 @@ for E in range(BATCHES):
     # Quad loss
     # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
 
-    alice_loss.backward(retain_graph=True)
     bob_reconst_loss.backward(retain_graph=True)
     eve_reconst_loss.backward(retain_graph=True)
+    alice_loss.backward(retain_graph=True)
 
     opt_alice.step()
     opt_bob.step()
@@ -223,24 +219,32 @@ for E in range(BATCHES):
     alice_running_loss.append(alice_loss.item())
     bob_running_loss.append(bob_reconst_loss.item())
     eve_running_loss.append(eve_reconst_loss.item())
+    
+    # Recalculate key after every 100 items
+    # if (len(alice_running_loss) / 100 == 0):
+    #   recalc_key()
+    
     # break
 
   print(f'Finished Batch {E}')
   recalc_plain()
-  recalc_key()
+  # recalc_key()
 
 print('Finished Training')
 
 # %%
-# Plots
+# Evaluation Plots
 sns.set_style('whitegrid')
-sm = 300
+sm = 1800
 
 # fig, [ax, bx] = plt.subplot(1, 1)
 
-SAVEPLOT = True
-# Turn this line on and off to control plot saving
+TITLE_TAG = f'{BLOCKSIZE} bits, BCE loss, B={BETA} G={GAMMA}'
+FILE_TAG = f'{BATCHES}x{len(PLAIN)}v{VERSION}'
+
 SAVEPLOT = False
+# Turn this line on and off to control plot saving
+SAVEPLOT = True
 
 plt.plot(trendline(alice_running_loss, sm))
 plt.plot(trendline(bob_running_loss, sm))
@@ -248,9 +252,9 @@ plt.plot(trendline(eve_running_loss, sm))
 plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Loss Trend (Sf {sm})')
-plt.title(f'Training - {BLOCKSIZE} bits, var Key, BCE loss, B={BETA} G={GAMMA}')
+plt.title(f'Training - {TITLE_TAG}')
 if SAVEPLOT:
-  plt.savefig(f'../models/graphs/loss_{BATCHES}E{len(PLAIN)}v{VERSION}.png', dpi=400)
+  plt.savefig(f'../models/graphs/loss_{FILE_TAG}.png', dpi=400)
 plt.show()
 
 plt.plot(trendline(bob_bits_err, sm))
@@ -258,9 +262,53 @@ plt.plot(trendline(eve_bits_err, sm))
 plt.legend(['Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Bit error trend (Sf {sm})')
-plt.title(f'Error - {BLOCKSIZE} bits, var Key, BCE loss, B={BETA} G={GAMMA}')
+plt.title(f'Error - {TITLE_TAG}')
 if SAVEPLOT:
-  plt.savefig(f'../models/graphs/error_{BATCHES}E{len(PLAIN)}v{VERSION}.png', dpi=400)
+  plt.savefig(f'../models/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
+
+
+bob_bits_err_test = []
+eve_bits_err_test = []
+
+recalc_plain()
+recalc_key()
+
+for P in PLAIN:
+  P = torch.Tensor(P)
+  K = torch.Tensor(KEY)
+
+  cipher = alice(torch.cat([P, K], dim=0))
+  cipher.detach()
+
+  Pb = bob(torch.cat([cipher, K], dim=0))
+  Pe = eve(cipher)
+
+  bob_err = 0
+  eve_err = 0
+  for b in range(BLOCKSIZE):
+    if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
+      bob_err += 1
+    if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
+      bob_err += 1
+
+    if (P[b] == 0 and Pe[b] >= DECISION_BOUNDARY):
+      eve_err += 1
+    if (P[b] == 1 and Pe[b] < DECISION_BOUNDARY):
+      eve_err += 1
+
+  bob_bits_err_test.append(bob_err)
+  eve_bits_err_test.append(eve_err)
+
+plt.plot(trendline(bob_bits_err_test, sm))
+plt.plot(trendline(eve_bits_err_test, sm))
+plt.legend(['Bob', 'Eve'], loc='upper right')
+plt.xlabel('Samples')
+plt.ylabel(f'Bit error trend (Sf {sm})')
+plt.title(f'Val Error - {TITLE_TAG}')
+if SAVEPLOT:
+  plt.savefig(f'../models/graphs/val_error_{FILE_TAG}.png', dpi=400)
+plt.show()
+
+
 # %%
-# Evaluation
