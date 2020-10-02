@@ -1,8 +1,10 @@
 """
-  ANC Test setup using GANs as described in the Abadi Paper
+ANC using GANs as described in the Abadi Paper.
+To verify findings and to make improvements.
 
-  Learning to protect communications with adversarial neural cryptography. 
-  Abadi, M.; Andersen, D.G.; arXiv 2016, arXiv:1610.06918.
+Abadi, M.; Andersen, D.G.; ICLR 2017
+Learning to protect communications with adversarial neural cryptography. 
+arXiv 2016, arXiv:1610.06918.
 """
 
 # %%
