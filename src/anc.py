@@ -123,9 +123,9 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-# lossfn = nn.L1Loss()
+lossfn = nn.L1Loss()
 # lossfn = nn.MSELoss()
-lossfn = nn.BCELoss()
+# lossfn = nn.BCELoss()
 
 opt_alice = torch.optim.Adam(alice.parameters(), lr=0.0008)
 opt_bob = torch.optim.Adam(bob.parameters(), lr=0.0008)
@@ -157,7 +157,7 @@ eve_bits_err = []
 
 # Hyperparams
 BETA = 1.0
-GAMMA = 1.0
+GAMMA = 1.2
 DECISION_BOUNDARY = 0.5
 
 for E in range(BATCHES):
@@ -191,10 +191,10 @@ for E in range(BATCHES):
     eve_reconst_loss = lossfn(Pe, P)
 
     # Linear loss
-    # alice_loss = (BETA * bob_reconst_loss) - (GAMMA * eve_reconst_loss)
+    alice_loss = (BETA * bob_reconst_loss) - (GAMMA * eve_reconst_loss)
 
     # Quad loss
-    alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
+    # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
 
     bob_reconst_loss.backward(retain_graph=True)
     eve_reconst_loss.backward(retain_graph=True)
@@ -221,11 +221,7 @@ for E in range(BATCHES):
     alice_running_loss.append(alice_loss.item())
     bob_running_loss.append(bob_reconst_loss.item())
     eve_running_loss.append(eve_reconst_loss.item())
-    
-    # Recalculate key after every 100 items
-    # if (len(alice_running_loss) / 100 == 0):
-    #   recalc_key()
-    
+
     # break
 
   print(f'Finished Batch {E}')
@@ -241,12 +237,12 @@ sf = 1800
 
 # fig, [ax, bx] = plt.subplot(1, 1)
 
-TITLE_TAG = f'{BLOCKSIZE} bits, Quadratic BCE loss, B={BETA} G={GAMMA}'
+TITLE_TAG = f'{BLOCKSIZE} bits, Linear, L1 loss, B={BETA} G={GAMMA}'
 FILE_TAG = f'{BATCHES}x{len(PLAIN)}v{VERSION}'
 
 SAVEPLOT = False
 # Turn this line on and off to control plot saving
-SAVEPLOT = True
+# SAVEPLOT = True
 
 plt.plot(trendline(alice_running_loss, sf))
 plt.plot(trendline(bob_running_loss, sf))
@@ -254,7 +250,7 @@ plt.plot(trendline(eve_running_loss, sf))
 plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Loss Trend (Sf {sf})')
-plt.title(f'Training - {TITLE_TAG}')
+plt.title(f'Training Loss - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/graphs/loss_{FILE_TAG}.png', dpi=400)
 plt.show()
@@ -264,7 +260,7 @@ plt.plot(trendline(eve_bits_err, sf))
 plt.legend(['Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Bit error trend (Sf {sf})')
-plt.title(f'Error - {TITLE_TAG}')
+plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
@@ -312,3 +308,5 @@ if SAVEPLOT:
   plt.savefig(f'../models/graphs/val_error_{FILE_TAG}.png', dpi=400)
 plt.show()
 
+
+# %%
