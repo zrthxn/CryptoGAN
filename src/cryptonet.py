@@ -24,6 +24,8 @@ VERSION = 1
 
 # %%
 # Define networks
+VERSION += 1
+
 class KeyholderNetwork(nn.Module):
   def __init__(self, blocksize):
     super(KeyholderNetwork, self).__init__()
@@ -34,6 +36,8 @@ class KeyholderNetwork(nn.Module):
     self.entry = nn.Identity(blocksize * 2)
 
     self.fc1 = nn.Linear(in_features=blocksize*2, out_features=blocksize*2)
+    self.fc2 = nn.Linear(in_features=blocksize*2, out_features=blocksize)
+    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
     
     self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
     self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
@@ -47,20 +51,25 @@ class KeyholderNetwork(nn.Module):
     inputs = self.fc1(inputs)
     inputs = torch.sigmoid(inputs)
 
-    inputs = inputs.unsqueeze(0).unsqueeze(0)
-
-    inputs = self.conv1(inputs)
+    inputs = self.fc2(inputs)
     inputs = torch.sigmoid(inputs)
     
-    inputs = self.conv2(inputs)
+    inputs = self.fc3(inputs)
     inputs = torch.sigmoid(inputs)
 
-    inputs = self.conv3(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = inputs.unsqueeze(0).unsqueeze(0)
+
+    # inputs = self.conv1(inputs)
+    # inputs = torch.sigmoid(inputs)
     
-    inputs = self.conv4(inputs)
-    inputs = F.hardsigmoid(inputs)
+    # inputs = self.conv2(inputs)
+    # inputs = torch.sigmoid(inputs)
 
+    # inputs = self.conv3(inputs)
+    # inputs = torch.sigmoid(inputs)
+    
+    # inputs = self.conv4(inputs)
+    # inputs = F.hardsigmoid(inputs)
     inputs = torch.div(1 - torch.cos(inputs), 2)
 
     return inputs.view(self.blocksize)
@@ -104,9 +113,9 @@ class AttackerNetwork(nn.Module):
 # Data and Proprocessing
 
 BLOCKSIZE = 16
-EPOCHS = 5
+EPOCHS = 1
 BATCHES = 64
-BATCHLEN = 64
+BATCHLEN = 256
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 PLAIN = [
@@ -134,16 +143,15 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-l1d = nn.L1Loss()
-# l2d = nn.MSELoss()
-# ce = nn.CrossEntropyLoss()
-bce = nn.BCELoss()
+# dist = nn.L1Loss()
+dist = nn.MSELoss()
+# dist = nn.CrossEntropyLoss()
+# dist = nn.BCELoss()
 
 opt_alice = torch.optim.Adam(alice.parameters(), lr=0.0008)
 opt_bob = torch.optim.Adam(bob.parameters(), lr=0.0008)
 opt_eve = torch.optim.Adam(eve.parameters(), lr=0.0002)
 
-VERSION += 1
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -169,10 +177,11 @@ bob_bits_err = []
 eve_bits_err = []
 
 # Hyperparams
-BETA = 1.0
+BETA = 1.5
 GAMMA = 1.0
 DECISION_BOUNDARY = 0.5
 
+print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
 for E in range(EPOCHS):
   print(f'Epoch {E + 1}/{EPOCHS}')
@@ -183,14 +192,13 @@ for E in range(EPOCHS):
       P0 = torch.Tensor(P[0])
       P1 = torch.Tensor(P[1])
 
-      R = random.randint(0, 1)
+      R = 0 #random.randint(0, 1)
       Q = torch.Tensor(P[R])
 
-      cipher = alice(torch.cat([Q, K], dim=0))
-      # cipher.detach()
+      C = alice(torch.cat([Q, K], dim=0))
 
-      Pb = bob(torch.cat([cipher, K], dim=0))
-      # Re = eve(torch.cat([P0, P1, cipher], dim=0))
+      Pb = bob(torch.cat([C, K], dim=0))
+      # Re = eve(torch.cat([P0, P1, C], dim=0))
 
       bob_err = 0
       for b in range(BLOCKSIZE):
@@ -201,13 +209,14 @@ for E in range(EPOCHS):
 
       bob_bits_err.append(bob_err)
       
-      bob_reconst_loss = l1d(Pb, Q)
-      # eve_recogni_loss = bce(Re, torch.Tensor([1 - R, R]))
+      bob_reconst_loss = dist(Pb, Q) # dist(Q, C)
+      # eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
       # Linear loss
-      # alice_loss = (BETA * bob_reconst_loss) #- (GAMMA * eve_recogni_loss)
+      alice_loss = (BETA * bob_reconst_loss) #- dist(Q, C) #- (GAMMA * eve_recogni_loss)
+      # alice_loss = BETA * l1d(Pb, Q)
 
-      # alice_loss.backward(retain_graph=True)
+      alice_loss.backward(retain_graph=True)
       bob_reconst_loss.backward(retain_graph=True)
       # eve_recogni_loss.backward(retain_graph=True)
 
@@ -224,20 +233,20 @@ for E in range(EPOCHS):
       #   print('--- Training Stalled ---')
       #   break
 
-      # alice_running_loss.append(alice_loss.item())
+      alice_running_loss.append(alice_loss.item())
       bob_running_loss.append(bob_reconst_loss.item())
       # eve_running_loss.append(eve_recogni_loss.item())
-      
-      # Recalculate key after every 100 items
-      # if (len(alice_running_loss) / 100 == 0):
-      #   recalc_key()
       
       # break
 
     # print(f'Finished Batch {B}')
     
-  recalc_plain()
-  recalc_key()
+    # recalc_plain()
+    # recalc_key()
+
+  # Stop when bits error is consistently zero
+  if bob_bits_err[-100:] == [0 for _ in range(100)]:
+    break
 
 print('Finished Training')
 
@@ -245,33 +254,34 @@ print('Finished Training')
 # %%
 # Evaluation Plots
 sns.set_style('whitegrid')
-sf = min(int(3 * BATCHES * BATCHLEN/10), 300)
+sf = min(int(BATCHES * BATCHLEN/10), 300)
 
-TITLE_TAG = f'[No Adv] {BLOCKSIZE} bits, BCE loss, B={BETA} G={GAMMA}'
-FILE_TAG = f'{BATCHES}x{len(PLAIN)}v{VERSION}'
+TITLE_TAG = f'[No Adv] {BLOCKSIZE} bits, {dist}, B={BETA} G={GAMMA}'
+FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
 
 SAVEPLOT = False
 # Turn this line on and off to control plot saving
-# SAVEPLOT = True
+SAVEPLOT = True
 
-plt.plot(trendline(bob_running_loss, sf))
+plt.plot(trendline(alice_running_loss[-2000:], sf))
+plt.plot(trendline(bob_running_loss[-2000:], sf))
 # plt.plot(trendline(eve_running_loss, sf))
-plt.legend(['Bob', 'Eve'], loc='upper right')
+plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
-plt.ylabel(f'Loss Trend (Sf {sf})')
-plt.title(f'Training - {TITLE_TAG}')
+plt.ylabel(f'Loss Trend (SF {sf})')
+plt.title(f'Training Loss - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/loss_{FILE_TAG}.png', dpi=400)
 plt.show()
 
-plt.plot(bob_bits_err)
-plt.plot(trendline(bob_bits_err, sf))
-plt.legend(['Loss', 'Trend'], loc='upper right')
+# plt.plot(bob_bits_err)
+plt.plot(trendline(bob_bits_err[-2000:], sf), color='green')
+plt.legend(['Trend'], loc='upper right')
 plt.xlabel('Samples')
-plt.ylabel(f'Bit error trend (Sf {sf})')
-plt.title(f'Bits Error - {TITLE_TAG}')
+plt.ylabel(f'Bit error trend (SF {sf})')
+plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
-  plt.savefig(f'../models/graphs/error_{FILE_TAG}.png', dpi=400)
+  plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
 
 # %%
@@ -285,10 +295,10 @@ plt.show()
 #   P = torch.Tensor(P)
 #   K = torch.Tensor(KEY)
 
-#   cipher = alice(torch.cat([P, K], dim=0))
-#   cipher.detach()
+#   C = alice(torch.cat([P, K], dim=0))
+#   C.detach()
 
-#   Pb = bob(torch.cat([cipher, K], dim=0))
+#   Pb = bob(torch.cat([C, K], dim=0))
 
 #   bob_err = 0
 #   eve_err = 0
@@ -310,3 +320,5 @@ plt.show()
 #   plt.savefig(f'../models/graphs/val_error_{FILE_TAG}.png', dpi=400)
 # plt.show()
 
+
+# %%
