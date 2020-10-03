@@ -6,7 +6,7 @@ This will help me keep a record of the things I have done and have to do.
 [Learning Perfectly Secure Cryptography toProtect Communications with AdversarialNeural Cryptography](https://www.researchgate.net/publication/324727645)<br>
 Coutinho, Murilo & Albuquerque, Robson & Borges, Fábio & García Villalba, Luis & Kim, Tai-Hoon. (2018). Sensors. 18. 10.3390/s18051306.
 
-### Observations
+## Observations
 
 - BCE Loss gives _worse_ results than L1
 - HardSigmoid in last layer gives _worse_ results
@@ -25,6 +25,14 @@ Coutinho, Murilo & Albuquerque, Robson & Borges, Fábio & García Villalba, Luis
   - Faster propagation
 - Random selection of which Plaintext to encrypt
   - All three P0, P1 and C go to Eve
+
+## Results (v20)
+
+The loss is seen to reduce over time but doesnt actually reduce smoothly.
+<img src="./graphs/loss_16E64x256v20.png" width="350px">
+
+The bit error was seen to drop to zero after a few iterations.
+<img src="./graphs/error_16E64x256v20.png" width="350px">
 
 ### Things to Try
 
