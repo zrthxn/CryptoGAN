@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-VERSION = 1
+VERSION = 17
 
 # %%
 # Define networks
@@ -143,8 +143,8 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-# dist = nn.L1Loss()
 dist = nn.MSELoss()
+# dist = nn.L1Loss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
@@ -179,6 +179,7 @@ eve_bits_err = []
 # Hyperparams
 BETA = 1.5
 GAMMA = 1.0
+OMEGA = 1.5
 DECISION_BOUNDARY = 0.5
 
 print(f'Model v{VERSION}')
@@ -192,13 +193,13 @@ for E in range(EPOCHS):
       P0 = torch.Tensor(P[0])
       P1 = torch.Tensor(P[1])
 
-      R = 0 #random.randint(0, 1)
+      R = random.randint(0, 1)
       Q = torch.Tensor(P[R])
 
       C = alice(torch.cat([Q, K], dim=0))
 
       Pb = bob(torch.cat([C, K], dim=0))
-      # Re = eve(torch.cat([P0, P1, C], dim=0))
+      Re = eve(torch.cat([P0, P1, C], dim=0))
 
       bob_err = 0
       for b in range(BLOCKSIZE):
@@ -210,19 +211,19 @@ for E in range(EPOCHS):
       bob_bits_err.append(bob_err)
       
       bob_reconst_loss = dist(Pb, Q) #- dist(Q, C)
-      # eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
+      eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
       # Linear loss
-      alice_loss = (BETA * bob_reconst_loss) #- dist(Q, C) #- (GAMMA * eve_recogni_loss)
+      alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
       # alice_loss = BETA * dist(Pb, Q)
 
       bob_reconst_loss.backward(retain_graph=True)
+      eve_recogni_loss.backward(retain_graph=True)
       alice_loss.backward(retain_graph=True)
-      # eve_recogni_loss.backward(retain_graph=True)
 
       opt_alice.step()
       opt_bob.step()
-      # opt_eve.step()
+      opt_eve.step()
 
       # delta_alice = alice_running_loss[-1] - alice_loss.item()
       # delta_bob = bob_running_loss[-1] - bob_reconst_loss.item()
@@ -235,17 +236,21 @@ for E in range(EPOCHS):
 
       alice_running_loss.append(alice_loss.item())
       bob_running_loss.append(bob_reconst_loss.item())
-      # eve_running_loss.append(eve_recogni_loss.item())
+      eve_running_loss.append(eve_recogni_loss.item())
       
       # break
 
     # print(f'Finished Batch {B}')
     
     recalc_plain()
-    # recalc_key()
+    recalc_key()
 
-  # Stop when bits error is consistently zero
-  if bob_bits_err[-100:] == [0 for _ in range(100)]:
+    # Stop when bits error is consistently zero for 1 batch
+    if bob_bits_err[-BATCHLEN:] == [0 for _ in range(BATCHLEN)]:
+      break
+
+  # Stop when bits error is consistently zero for 3 Batches
+  if bob_bits_err[-3*BATCHLEN:] == [0 for _ in range(3*BATCHLEN)]:
     break
 
 print('Finished Training')
@@ -254,7 +259,7 @@ print('Finished Training')
 # %%
 # Evaluation Plots
 sns.set_style('whitegrid')
-sf = min(int(BATCHES * BATCHLEN/10), 300)
+sf = min(int(BATCHES * BATCHLEN/10), 100)
 
 TITLE_TAG = f'[No Adv] {BLOCKSIZE} bits, {dist}, B={BETA} G={GAMMA}'
 FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
@@ -263,10 +268,12 @@ SAVEPLOT = False
 # Turn this line on and off to control plot saving
 SAVEPLOT = True
 
+# plt.xkcd()
 plt.plot(trendline(alice_running_loss[:2000], sf))
 plt.plot(trendline(bob_running_loss[:2000], sf))
-# plt.plot(trendline(eve_running_loss, sf))
+plt.plot(trendline(eve_running_loss[:2000], sf))
 plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
+# plt.xlim(len(bob_running_loss) - 2000, len(bob_running_loss))
 plt.xlabel('Samples')
 plt.ylabel(f'Loss Trend (SF {sf})')
 plt.title(f'Training Loss - {TITLE_TAG}')
