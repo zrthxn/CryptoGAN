@@ -118,23 +118,19 @@ BATCHES = 64
 BATCHLEN = 256
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
-PLAIN = [
-  [
+PLAIN = [[
     [random.randint(0, 1) for x in range(BLOCKSIZE)],
     [random.randint(0, 1) for y in range(BLOCKSIZE)]
-  ] for i in range(BATCHLEN)
-]
+    ] for i in range(BATCHLEN)]
 
 def recalc_key():
   KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 
 def recalc_plain():
-  PLAIN = [
-    [
+  PLAIN = [[
       [random.randint(0, 1) for x in range(BLOCKSIZE)],
       [random.randint(0, 1) for y in range(BLOCKSIZE)]
-    ] for i in range(BATCHLEN)
-  ]
+    ] for i in range(BATCHLEN)]
 
 # %%
 # Initialize Networks
@@ -210,7 +206,7 @@ for E in range(EPOCHS):
 
       bob_bits_err.append(bob_err)
       
-      bob_reconst_loss = dist(Pb, Q) #- dist(Q, C)
+      bob_reconst_loss = dist(Pb, Q)
       eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
       alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
@@ -230,7 +226,6 @@ for E in range(EPOCHS):
       # break
 
     # print(f'Finished Batch {B}')
-    
     recalc_plain()
     recalc_key()
 
@@ -239,7 +234,7 @@ for E in range(EPOCHS):
       break
 
   # Stop when bits error is consistently zero for 3 Batches
-  if bob_bits_err[-3*BATCHLEN:] == [0 for _ in range(3*BATCHLEN)]:
+  if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
     break
 
 print('Finished Training')
