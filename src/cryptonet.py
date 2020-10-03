@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-VERSION = 17
+VERSION = 20
 
 # %%
 # Define networks
@@ -113,7 +113,7 @@ class AttackerNetwork(nn.Module):
 # Data and Proprocessing
 
 BLOCKSIZE = 16
-EPOCHS = 1
+EPOCHS = 16
 BATCHES = 64
 BATCHLEN = 256
 
@@ -179,7 +179,7 @@ eve_bits_err = []
 # Hyperparams
 BETA = 1.5
 GAMMA = 1.0
-OMEGA = 1.5
+OMEGA = 2.0
 DECISION_BOUNDARY = 0.5
 
 print(f'Model v{VERSION}')
@@ -213,9 +213,7 @@ for E in range(EPOCHS):
       bob_reconst_loss = dist(Pb, Q) #- dist(Q, C)
       eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
-      # Linear loss
       alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
-      # alice_loss = BETA * dist(Pb, Q)
 
       bob_reconst_loss.backward(retain_graph=True)
       eve_recogni_loss.backward(retain_graph=True)
@@ -224,15 +222,6 @@ for E in range(EPOCHS):
       opt_alice.step()
       opt_bob.step()
       opt_eve.step()
-
-      # delta_alice = alice_running_loss[-1] - alice_loss.item()
-      # delta_bob = bob_running_loss[-1] - bob_reconst_loss.item()
-      # delta_eve = eve_running_loss[-1] - eve_reconst_loss.item()
-
-      # Stop when no/low avg change
-      # if ((delta_alice + delta_bob + delta_eve)/3 <= 0.00005):
-      #   print('--- Training Stalled ---')
-      #   break
 
       alice_running_loss.append(alice_loss.item())
       bob_running_loss.append(bob_reconst_loss.item())
@@ -266,7 +255,7 @@ FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
 
 SAVEPLOT = False
 # Turn this line on and off to control plot saving
-SAVEPLOT = True
+# SAVEPLOT = True
 
 # plt.xkcd()
 plt.plot(trendline(alice_running_loss[:2000], sf))
@@ -291,41 +280,3 @@ if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
 
-# %%
-# Evaluation
-# bob_bits_err_test = []
-
-# recalc_plain()
-# recalc_key()
-
-# for P in PLAIN:
-#   P = torch.Tensor(P)
-#   K = torch.Tensor(KEY)
-
-#   C = alice(torch.cat([P, K], dim=0))
-#   C.detach()
-
-#   Pb = bob(torch.cat([C, K], dim=0))
-
-#   bob_err = 0
-#   eve_err = 0
-#   for b in range(BLOCKSIZE):
-#     if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
-#       bob_err += 1
-#     if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
-#       bob_err += 1
-
-#   bob_bits_err_test.append(bob_err)
-
-# plt.plot(bob_bits_err_test)
-# plt.plot(trendline(bob_bits_err_test, sf))
-# plt.legend(['Bob', 'Eve'], loc='upper right')
-# plt.xlabel('Samples')
-# plt.ylabel(f'Bit error trend (Sf {sf})')
-# plt.title(f'Val Error - {TITLE_TAG}')
-# if SAVEPLOT:
-#   plt.savefig(f'../models/graphs/val_error_{FILE_TAG}.png', dpi=400)
-# plt.show()
-
-
-# %%
