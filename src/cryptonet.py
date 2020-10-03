@@ -209,15 +209,15 @@ for E in range(EPOCHS):
 
       bob_bits_err.append(bob_err)
       
-      bob_reconst_loss = dist(Pb, Q) # dist(Q, C)
+      bob_reconst_loss = dist(Pb, Q) #- dist(Q, C)
       # eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
       # Linear loss
       alice_loss = (BETA * bob_reconst_loss) #- dist(Q, C) #- (GAMMA * eve_recogni_loss)
-      # alice_loss = BETA * l1d(Pb, Q)
+      # alice_loss = BETA * dist(Pb, Q)
 
-      alice_loss.backward(retain_graph=True)
       bob_reconst_loss.backward(retain_graph=True)
+      alice_loss.backward(retain_graph=True)
       # eve_recogni_loss.backward(retain_graph=True)
 
       opt_alice.step()
@@ -241,7 +241,7 @@ for E in range(EPOCHS):
 
     # print(f'Finished Batch {B}')
     
-    # recalc_plain()
+    recalc_plain()
     # recalc_key()
 
   # Stop when bits error is consistently zero
@@ -263,8 +263,8 @@ SAVEPLOT = False
 # Turn this line on and off to control plot saving
 SAVEPLOT = True
 
-plt.plot(trendline(alice_running_loss[-2000:], sf))
-plt.plot(trendline(bob_running_loss[-2000:], sf))
+plt.plot(trendline(alice_running_loss[:2000], sf))
+plt.plot(trendline(bob_running_loss[:2000], sf))
 # plt.plot(trendline(eve_running_loss, sf))
 plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 plt.xlabel('Samples')
@@ -275,7 +275,7 @@ if SAVEPLOT:
 plt.show()
 
 # plt.plot(bob_bits_err)
-plt.plot(trendline(bob_bits_err[-2000:], sf), color='green')
+plt.plot(trendline(bob_bits_err[:2000], sf), color='green')
 plt.legend(['Trend'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Bit error trend (SF {sf})')
