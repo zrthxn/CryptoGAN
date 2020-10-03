@@ -29,9 +29,11 @@ Coutinho, Murilo & Albuquerque, Robson & Borges, Fábio & García Villalba, Luis
 ## Results (v20)
 
 The loss is seen to reduce over time but doesnt actually reduce smoothly.
+
 <img src="./graphs/loss_16E64x256v20.png" width="350px">
 
 The bit error was seen to drop to zero after a few iterations.
+
 <img src="./graphs/error_16E64x256v20.png" width="350px">
 
 ### Things to Try
