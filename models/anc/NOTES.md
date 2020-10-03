@@ -1,4 +1,4 @@
-# Notes [Abadi Implementation]
+# [Notes] Abadi Implementation
 
 These are some notes from my implementation of the following papers and experiments.
 This will help me keep a record of the things I have done and have to do.
