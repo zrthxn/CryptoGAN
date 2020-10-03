@@ -112,7 +112,7 @@ class AttackerNetwork(nn.Module):
 # %%
 # Data and Proprocessing
 
-BLOCKSIZE = 16
+BLOCKSIZE = 32
 EPOCHS = 16
 BATCHES = 64
 BATCHLEN = 256
@@ -173,8 +173,8 @@ bob_bits_err = []
 eve_bits_err = []
 
 # Hyperparams
-BETA = 1.5
-GAMMA = 1.0
+BETA = 1.0
+GAMMA = 1.5
 OMEGA = 2.0
 DECISION_BOUNDARY = 0.5
 
@@ -229,9 +229,9 @@ for E in range(EPOCHS):
     recalc_plain()
     recalc_key()
 
-    # Stop when bits error is consistently zero for 1 batch
-    if bob_bits_err[-BATCHLEN:] == [0 for _ in range(BATCHLEN)]:
-      break
+    # # Stop when bits error is consistently zero for 1 batch
+    # if bob_bits_err[-BATCHLEN:] == [0 for _ in range(BATCHLEN)]:
+    #   break
 
   # Stop when bits error is consistently zero for 3 Batches
   if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
@@ -243,21 +243,21 @@ print('Finished Training')
 # %%
 # Evaluation Plots
 sns.set_style('whitegrid')
-sf = min(int(BATCHES * BATCHLEN/10), 100)
+sf = min(int(BATCHES * EPOCHS/10), 50)
 
-TITLE_TAG = f'[No Adv] {BLOCKSIZE} bits, {dist}, B={BETA} G={GAMMA}'
+TITLE_TAG = f'{BLOCKSIZE} bits, {dist}, B={BETA} G={GAMMA} W={OMEGA}'
 FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
 
 SAVEPLOT = False
 # Turn this line on and off to control plot saving
-# SAVEPLOT = True
+SAVEPLOT = True
 
 # plt.xkcd()
-plt.plot(trendline(alice_running_loss[:2000], sf))
-plt.plot(trendline(bob_running_loss[:2000], sf))
-plt.plot(trendline(eve_running_loss[:2000], sf))
+plt.plot(trendline(alice_running_loss[:1000], sf))
+plt.plot(trendline(bob_running_loss[:1000], sf))
+plt.plot(trendline(eve_running_loss[:1000], sf))
 plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
-# plt.xlim(len(bob_running_loss) - 2000, len(bob_running_loss))
+# plt.xlim(len(bob_running_loss) - 1000, len(bob_running_loss))
 plt.xlabel('Samples')
 plt.ylabel(f'Loss Trend (SF {sf})')
 plt.title(f'Training Loss - {TITLE_TAG}')
@@ -266,7 +266,7 @@ if SAVEPLOT:
 plt.show()
 
 # plt.plot(bob_bits_err)
-plt.plot(trendline(bob_bits_err[:2000], sf), color='green')
+plt.plot(trendline(bob_bits_err[:1000], sf), color='green')
 plt.legend(['Trend'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Bit error trend (SF {sf})')
