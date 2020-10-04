@@ -35,43 +35,52 @@ class KeyholderNetwork(nn.Module):
     # Entry layer verifies the size of inputs before proceeding
     self.entry = nn.Identity(blocksize * 2)
 
-    self.fc1 = nn.Linear(in_features=blocksize*2, out_features=blocksize*2)
-    self.fc2 = nn.Linear(in_features=blocksize*2, out_features=blocksize)
-    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
+    self.fc1 = nn.Linear(in_features=blocksize*2, out_features=blocksize*4)
+    self.fc2 = nn.Linear(in_features=blocksize*4, out_features=blocksize*2)
+    self.fc3 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
     
-    self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
-    self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
-    self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
-    self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
+    self.norm = nn.BatchNorm1d(num_features=blocksize)
+    
+    # self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
+    # self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
+    # self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
+    # self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
  
+  def squash(self, input_):
+    squared_norm = (input_ ** 2).sum(-1, keepdim=True)
+    denom = ((1. + squared_norm) * torch.sqrt(squared_norm))
+    if torch.isinf(denom).sum().item() > 0:
+      output_ = input_ / torch.sqrt(squared_norm)
+    else:
+      output_ = squared_norm * input_ / ((1. + squared_norm) * torch.sqrt(squared_norm))
+    return output_
+
   def forward(self, inputs):    
     inputs = self.entry(inputs)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
 
-    inputs = self.fc1(inputs)
-    inputs = torch.sigmoid(inputs)
+    # f = arccos(1-2b)
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
+    inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
 
-    inputs = self.fc2(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = torch.sigmoid(inputs)
+    # inputs = F.hardsigmoid(inputs)
+
+    # inputs = self.fc1(inputs)
+    # inputs = torch.sigmoid(inputs)
+
+    # inputs = self.fc2(inputs)
+    # inputs = torch.sigmoid(inputs)
     
     inputs = self.fc3(inputs)
     inputs = torch.sigmoid(inputs)
-
-    # inputs = inputs.unsqueeze(0).unsqueeze(0)
-
-    # inputs = self.conv1(inputs)
-    # inputs = torch.sigmoid(inputs)
     
-    # inputs = self.conv2(inputs)
-    # inputs = torch.sigmoid(inputs)
-
-    # inputs = self.conv3(inputs)
-    # inputs = torch.sigmoid(inputs)
-    
-    # inputs = self.conv4(inputs)
-    # inputs = F.hardsigmoid(inputs)
+    # f* = [1 - cos(a)]/2
     inputs = torch.div(1 - torch.cos(inputs), 2)
+    
+    inputs = inputs.unsqueeze(dim=0)
+    inputs = self.norm(inputs)
 
+    # return self.squash(inputs)
     return inputs.view(self.blocksize)
 
 
@@ -113,9 +122,9 @@ class AttackerNetwork(nn.Module):
 # Data and Proprocessing
 
 BLOCKSIZE = 32
-EPOCHS = 16
-BATCHES = 64
-BATCHLEN = 256
+EPOCHS = 4
+BATCHES = 256
+BATCHLEN = 64
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 PLAIN = [[
@@ -139,14 +148,14 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-dist = nn.MSELoss()
-# dist = nn.L1Loss()
+# dist = nn.MSELoss()
+dist = nn.L1Loss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
-opt_alice = torch.optim.Adam(alice.parameters(), lr=0.0008)
-opt_bob = torch.optim.Adam(bob.parameters(), lr=0.0008)
-opt_eve = torch.optim.Adam(eve.parameters(), lr=0.0002)
+opt_alice = torch.optim.Adam(alice.parameters(), lr=8e-4, weight_decay=1e-5)
+opt_bob = torch.optim.Adam(bob.parameters(), lr=8e-4, weight_decay=1e-5)
+opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4, weight_decay=1e-5)
 
 
 def trendline(data, deg=1):
@@ -174,12 +183,13 @@ eve_bits_err = []
 
 # Hyperparams
 BETA = 1.0
-GAMMA = 1.5
-OMEGA = 2.0
+GAMMA = 1.2
+OMEGA = 1.5
 DECISION_BOUNDARY = 0.5
 
 print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
+STOP = False
 for E in range(EPOCHS):
   print(f'Epoch {E + 1}/{EPOCHS}')
   for B in range(BATCHES):
@@ -193,6 +203,11 @@ for E in range(EPOCHS):
       Q = torch.Tensor(P[R])
 
       C = alice(torch.cat([Q, K], dim=0))
+      
+      if torch.isnan(C[0]):
+        raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
+        STOP = True
+        break
 
       Pb = bob(torch.cat([C, K], dim=0))
       Re = eve(torch.cat([P0, P1, C], dim=0))
@@ -209,32 +224,42 @@ for E in range(EPOCHS):
       bob_reconst_loss = dist(Pb, Q)
       eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
 
-      alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
+      # alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
+      # alice_loss = bob_reconst_loss - eve_recogni_loss #- dist(Q, C)
+
+      # alice_running_loss.append(alice_loss.item())
+      bob_running_loss.append(bob_reconst_loss.item())
+      eve_running_loss.append(eve_recogni_loss.item())
 
       bob_reconst_loss.backward(retain_graph=True)
       eve_recogni_loss.backward(retain_graph=True)
-      alice_loss.backward(retain_graph=True)
+      # alice_loss.backward(retain_graph=True)
 
       opt_alice.step()
       opt_bob.step()
       opt_eve.step()
-
-      alice_running_loss.append(alice_loss.item())
-      bob_running_loss.append(bob_reconst_loss.item())
-      eve_running_loss.append(eve_recogni_loss.item())
       
       # break
+      if STOP:
+        break
 
     # print(f'Finished Batch {B}')
     recalc_plain()
-    recalc_key()
 
     # # Stop when bits error is consistently zero for 1 batch
     # if bob_bits_err[-BATCHLEN:] == [0 for _ in range(BATCHLEN)]:
     #   break
+    
+    if STOP:
+      break
+
+  recalc_key()
 
   # Stop when bits error is consistently zero for 3 Batches
-  if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
+  # if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
+  #   break
+  
+  if STOP:
     break
 
 print('Finished Training')
@@ -250,28 +275,31 @@ FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
 
 SAVEPLOT = False
 # Turn this line on and off to control plot saving
-SAVEPLOT = True
+# SAVEPLOT = True
 
 # plt.xkcd()
-plt.plot(trendline(alice_running_loss[:1000], sf))
-plt.plot(trendline(bob_running_loss[:1000], sf))
-plt.plot(trendline(eve_running_loss[:1000], sf))
-plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
+# plt.plot(trendline(alice_running_loss, sf))
+plt.plot(trendline(bob_running_loss, sf))
+plt.plot(trendline(eve_running_loss, sf))
+plt.legend(['Bob', 'Eve'], loc='upper right')
+# plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 # plt.xlim(len(bob_running_loss) - 1000, len(bob_running_loss))
 plt.xlabel('Samples')
-plt.ylabel(f'Loss Trend (SF {sf})')
+plt.ylabel(f'Loss (SF {sf})')
 plt.title(f'Training Loss - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/loss_{FILE_TAG}.png', dpi=400)
 plt.show()
 
-# plt.plot(bob_bits_err)
-plt.plot(trendline(bob_bits_err[:1000], sf), color='green')
-plt.legend(['Trend'], loc='upper right')
+plt.plot(bob_bits_err, color='red')
+plt.plot(trendline(bob_bits_err, sf), color='black')
+plt.legend(['Actual', 'Trend'], loc='upper right')
 plt.xlabel('Samples')
-plt.ylabel(f'Bit error trend (SF {sf})')
+plt.ylabel(f'Bit error (SF {sf})')
 plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
 
+
+# %%
