@@ -15,12 +15,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import wandb
 
 from matplotlib import pyplot as plt
 import seaborn as sns
 sns.set()
 
-VERSION = 20
+VERSION = 22
+
+wbrun = wandb.init(project="cryptonet")
 
 # %%
 # Define networks
@@ -59,17 +62,17 @@ class KeyholderNetwork(nn.Module):
     inputs = self.entry(inputs)
 
     # f = arccos(1-2b)
-    # inputs = torch.acos(1 - torch.mul(inputs, 2))
-    inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
+    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
 
     # inputs = torch.sigmoid(inputs)
     # inputs = F.hardsigmoid(inputs)
 
-    # inputs = self.fc1(inputs)
-    # inputs = torch.sigmoid(inputs)
+    inputs = self.fc1(inputs)
+    inputs = torch.relu(inputs)
 
-    # inputs = self.fc2(inputs)
-    # inputs = torch.sigmoid(inputs)
+    inputs = self.fc2(inputs)
+    inputs = torch.relu(inputs)
     
     inputs = self.fc3(inputs)
     inputs = torch.sigmoid(inputs)
@@ -77,11 +80,10 @@ class KeyholderNetwork(nn.Module):
     # f* = [1 - cos(a)]/2
     inputs = torch.div(1 - torch.cos(inputs), 2)
     
-    inputs = inputs.unsqueeze(dim=0)
     inputs = self.norm(inputs)
 
-    # return self.squash(inputs)
-    return inputs.view(self.blocksize)
+    # return inputs #.view(self.blocksize)
+    return inputs
 
 
 
@@ -121,7 +123,7 @@ class AttackerNetwork(nn.Module):
 # %%
 # Data and Proprocessing
 
-BLOCKSIZE = 32
+BLOCKSIZE = 16
 EPOCHS = 4
 BATCHES = 256
 BATCHLEN = 64
@@ -148,15 +150,17 @@ alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-# dist = nn.MSELoss()
 dist = nn.L1Loss()
+# dist = nn.MSELoss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
+# opt_alice = torch.optim.SGD(alice.parameters(), lr=8e-4, momentum=1e-1)
+# opt_bob = torch.optim.SGD(bob.parameters(), lr=8e-4, momentum=1e-1)
+# opt_eve = torch.optim.SGD(eve.parameters(), lr=2e-4, momentum=1e-1)
 opt_alice = torch.optim.Adam(alice.parameters(), lr=8e-4, weight_decay=1e-5)
 opt_bob = torch.optim.Adam(bob.parameters(), lr=8e-4, weight_decay=1e-5)
 opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4, weight_decay=1e-5)
-
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -170,13 +174,16 @@ def trendline(data, deg=1):
  
   return trend
 
-
 # %%
 # Training loop
 
 alice_running_loss = []
 bob_running_loss = []
 eve_running_loss = []
+
+alice_grad = []
+bob_grad = []
+eve_grad = []
 
 bob_bits_err = []
 eve_bits_err = []
@@ -189,61 +196,78 @@ DECISION_BOUNDARY = 0.5
 
 print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
+alice.train()
+bob.train()
+eve.train()
+
+wbrun.watch(alice, log='all')
+
 STOP = False
 for E in range(EPOCHS):
   print(f'Epoch {E + 1}/{EPOCHS}')
+  K = torch.Tensor(KEY)
+
+  opt_alice.zero_grad()
+  opt_bob.zero_grad()
+  opt_eve.zero_grad()
+
   for B in range(BATCHES):
-    for P in PLAIN:
-      K = torch.Tensor(KEY)
 
-      P0 = torch.Tensor(P[0])
-      P1 = torch.Tensor(P[1])
+    P0 = torch.Tensor([P[0] for P in PLAIN])
+    P1 = torch.Tensor([P[1] for P in PLAIN])
 
-      R = random.randint(0, 1)
-      Q = torch.Tensor(P[R])
+    R = torch.randint(2, (BATCHLEN,))
+    P = torch.cat([s.unsqueeze(dim=0) for s in [torch.Tensor(PLAIN[r][R[r].item()]) for r in range(BATCHLEN)]], dim=0)
+    
+    Q = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([p, K], dim=0) for p in P]], dim=0)
+    C = alice(Q)
+    
+    # if torch.isnan(C[0][0]):
+    #   raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
 
-      C = alice(torch.cat([Q, K], dim=0))
-      
-      if torch.isnan(C[0]):
-        raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
-        STOP = True
-        break
+    Db = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([c, K], dim=0) for c in C]], dim=0)
+    Pb = bob(Db)
 
-      Pb = bob(torch.cat([C, K], dim=0))
-      Re = eve(torch.cat([P0, P1, C], dim=0))
+    De = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([P0[r], P1[r], C[r]], dim=0) for r in range(BATCHLEN)]], dim=0)
+    Re = eve(De)
 
-      bob_err = 0
+    bob_err = 0
+    for x in range(BATCHLEN):
       for b in range(BLOCKSIZE):
-        if (Q[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
+        if (P[x][b] == 0 and Pb[x][b] >= DECISION_BOUNDARY):
           bob_err += 1
-        if (Q[b] == 1 and Pb[b] < DECISION_BOUNDARY):
+        if (P[x][b] == 1 and Pb[x][b] < DECISION_BOUNDARY):
           bob_err += 1
 
-      bob_bits_err.append(bob_err)
-      
-      bob_reconst_loss = dist(Pb, Q)
-      eve_recogni_loss = dist(Re, torch.Tensor([1 - R, R]))
+    bob_bits_err.append(bob_err)
+    
+    bob_reconst_loss = dist(Pb, P)
+    eve_recogni_loss = dist(Re, torch.cat([torch.Tensor([1 - r, r]).unsqueeze(dim=0) for r in R], dim=0))
 
-      # alice_loss = (BETA * bob_reconst_loss) - (OMEGA * dist(Q, C)) - (GAMMA * eve_recogni_loss)
-      # alice_loss = bob_reconst_loss - eve_recogni_loss #- dist(Q, C)
+    # alice_loss = (BETA*bob_reconst_loss) - (OMEGA*dist(P, C)) - (GAMMA*eve_recogni_loss)
+    alice_loss = bob_reconst_loss - eve_recogni_loss - dist(P, C)
 
-      # alice_running_loss.append(alice_loss.item())
-      bob_running_loss.append(bob_reconst_loss.item())
-      eve_running_loss.append(eve_recogni_loss.item())
+    alice_running_loss.append(alice_loss.item())
+    bob_running_loss.append(bob_reconst_loss.item())
+    eve_running_loss.append(eve_recogni_loss.item())
 
-      bob_reconst_loss.backward(retain_graph=True)
-      eve_recogni_loss.backward(retain_graph=True)
-      # alice_loss.backward(retain_graph=True)
+    wbrun.log({'Alice Loss': alice_loss})
 
-      opt_alice.step()
-      opt_bob.step()
-      opt_eve.step()
-      
-      # break
-      if STOP:
-        break
+    bob_reconst_loss.backward(retain_graph=True)
+    eve_recogni_loss.backward(retain_graph=True)
+    alice_loss.backward(retain_graph=True)
 
-    # print(f'Finished Batch {B}')
+    # for param in alice.parameters():
+    #   print(param)
+
+    torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
+    torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
+    torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
+
+    opt_alice.step()
+    opt_bob.step()
+    opt_eve.step()
+
     recalc_plain()
 
     # # Stop when bits error is consistently zero for 1 batch
@@ -255,9 +279,9 @@ for E in range(EPOCHS):
 
   recalc_key()
 
-  # Stop when bits error is consistently zero for 3 Batches
-  # if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
-  #   break
+  # Stop when bit error is consistently zero for 3 Batches
+  if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
+    STOP = True
   
   if STOP:
     break
@@ -277,13 +301,12 @@ SAVEPLOT = False
 # Turn this line on and off to control plot saving
 # SAVEPLOT = True
 
-# plt.xkcd()
-# plt.plot(trendline(alice_running_loss, sf))
-plt.plot(trendline(bob_running_loss, sf))
-plt.plot(trendline(eve_running_loss, sf))
+# plt.plot(trendline(alice_running_loss[:1000], sf))
+plt.plot(trendline(bob_running_loss[:1000], sf))
+plt.plot(trendline(eve_running_loss[:1000], sf))
 plt.legend(['Bob', 'Eve'], loc='upper right')
 # plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
-# plt.xlim(len(bob_running_loss) - 1000, len(bob_running_loss))
+# plt.xlim(len(alice_running_loss) - 1000, len(alice_running_loss))
 plt.xlabel('Samples')
 plt.ylabel(f'Loss (SF {sf})')
 plt.title(f'Training Loss - {TITLE_TAG}')

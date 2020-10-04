@@ -4,3 +4,6 @@ docs/*.fls
 docs/*.fdb_latexmk
 docs/*.out
 docs/*.gz
+
+wandb/
+!wandb/latest-run
