@@ -23,7 +23,7 @@ sns.set()
 
 VERSION = 22
 
-wbrun = wandb.init(project="cryptonet")
+# wbrun = wandb.init(project="cryptonet")
 
 # %%
 # Define networks
@@ -62,17 +62,17 @@ class KeyholderNetwork(nn.Module):
     inputs = self.entry(inputs)
 
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
-    # inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
+    inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
 
-    # inputs = torch.sigmoid(inputs)
+    inputs = torch.sigmoid(inputs)
     # inputs = F.hardsigmoid(inputs)
 
-    inputs = self.fc1(inputs)
-    inputs = torch.relu(inputs)
+    # inputs = self.fc1(inputs)
+    # inputs = torch.relu(inputs)
 
-    inputs = self.fc2(inputs)
-    inputs = torch.relu(inputs)
+    # inputs = self.fc2(inputs)
+    # inputs = torch.relu(inputs)
     
     inputs = self.fc3(inputs)
     inputs = torch.sigmoid(inputs)
@@ -97,6 +97,14 @@ class AttackerNetwork(nn.Module):
     self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 4)
     self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize)
     self.fc3 = nn.Linear(in_features=blocksize, out_features=2)
+
+  def free_energy(self, v):
+    vbias_term = v.mv(self.v_bias)
+    wx_b = F.linear(v,self.W,self.h_bias)
+    zr = torch. Variable(torch.zeros(wx_b.size()))
+    mask = torch.max(zr, wx_b)
+    hidden_term = (((wx_b - mask).exp() + (-mask).exp()).log() + (mask)).sum(1)
+    return (-hidden_term - vbias_term).mean()
 
   def forward(self, inputs):
     inputs = self.entry(inputs)
@@ -196,20 +204,21 @@ DECISION_BOUNDARY = 0.5
 
 print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
+
+opt_alice.zero_grad()
+opt_bob.zero_grad()
+opt_eve.zero_grad()
+
 alice.train()
 bob.train()
 eve.train()
 
-wbrun.watch(alice, log='all')
+# wbrun.watch(alice, log='all')
 
 STOP = False
 for E in range(EPOCHS):
   print(f'Epoch {E + 1}/{EPOCHS}')
   K = torch.Tensor(KEY)
-
-  opt_alice.zero_grad()
-  opt_bob.zero_grad()
-  opt_eve.zero_grad()
 
   for B in range(BATCHES):
 
@@ -222,14 +231,20 @@ for E in range(EPOCHS):
     Q = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([p, K], dim=0) for p in P]], dim=0)
     C = alice(Q)
     
-    # if torch.isnan(C[0][0]):
-    #   raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
+    if torch.isnan(C[0][0]):
+      raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
 
     Db = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([c, K], dim=0) for c in C]], dim=0)
     Pb = bob(Db)
 
+    if torch.isnan(Pb[0][0]):
+      raise OverflowError(f'[BATCH {B}] {len(bob_running_loss)}: Exploding Gradient')
+
     De = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([P0[r], P1[r], C[r]], dim=0) for r in range(BATCHLEN)]], dim=0)
     Re = eve(De)
+
+    if torch.isnan(Re[0][0]):
+      raise OverflowError(f'[BATCH {B}] {len(eve_running_loss)}: Exploding Gradient')
 
     bob_err = 0
     for x in range(BATCHLEN):
@@ -245,26 +260,24 @@ for E in range(EPOCHS):
     eve_recogni_loss = dist(Re, torch.cat([torch.Tensor([1 - r, r]).unsqueeze(dim=0) for r in R], dim=0))
 
     # alice_loss = (BETA*bob_reconst_loss) - (OMEGA*dist(P, C)) - (GAMMA*eve_recogni_loss)
-    alice_loss = bob_reconst_loss - eve_recogni_loss - dist(P, C)
+    # alice_loss = bob_reconst_loss - eve_recogni_loss #- dist(P, C)
 
-    alice_running_loss.append(alice_loss.item())
+    # alice_running_loss.append(alice_loss.item())
     bob_running_loss.append(bob_reconst_loss.item())
     eve_running_loss.append(eve_recogni_loss.item())
 
-    wbrun.log({'Alice Loss': alice_loss})
-
     bob_reconst_loss.backward(retain_graph=True)
     eve_recogni_loss.backward(retain_graph=True)
-    alice_loss.backward(retain_graph=True)
+    # alice_loss.backward(retain_graph=True)
 
-    # for param in alice.parameters():
-    #   print(param)
+    for param in alice.parameters():
+      alice_grad.append(param.grad)
 
     torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
     torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
     torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
 
-    opt_alice.step()
+    # opt_alice.step()
     opt_bob.step()
     opt_eve.step()
 
@@ -302,8 +315,8 @@ SAVEPLOT = False
 # SAVEPLOT = True
 
 # plt.plot(trendline(alice_running_loss[:1000], sf))
-plt.plot(trendline(bob_running_loss[:1000], sf))
-plt.plot(trendline(eve_running_loss[:1000], sf))
+plt.plot(trendline(bob_running_loss, sf))
+plt.plot(trendline(eve_running_loss, sf))
 plt.legend(['Bob', 'Eve'], loc='upper right')
 # plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 # plt.xlim(len(alice_running_loss) - 1000, len(alice_running_loss))
