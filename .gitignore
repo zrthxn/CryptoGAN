@@ -7,3 +7,5 @@ docs/*.gz
 
 wandb/
 !wandb/latest-run
+
+training/
