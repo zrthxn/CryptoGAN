@@ -167,15 +167,13 @@ dist = nn.L1Loss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
-# opt_alice = torch.optim.SGD(alice.parameters(), lr=8e-4, momentum=1e-1)
-# opt_bob = torch.optim.SGD(bob.parameters(), lr=8e-4, momentum=1e-1)
-# opt_eve = torch.optim.SGD(eve.parameters(), lr=2e-4, momentum=1e-1)
-opt_alice = torch.optim.Adam(alice.parameters(), lr=8e-4, weight_decay=1e-5)
+# opt_alice = torch.optim.Adam(alice.parameters(), lr=8e-4, weight_decay=1e-5)
 opt_bob = torch.optim.Adam(bob.parameters(), lr=8e-4, weight_decay=1e-5)
 opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4, weight_decay=1e-5)
 
 graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
 writer.add_graph(alice, graph_ip)
+writer.add_graph(bob, graph_ip)
 writer.close() 
 
 def trendline(data, deg=1):
@@ -221,7 +219,7 @@ for E in range(EPOCHS):
   K = torch.Tensor(KEY)
 
   for B in range(BATCHES):
-    opt_alice.zero_grad()
+    # opt_alice.zero_grad()
     opt_bob.zero_grad()
     opt_eve.zero_grad()
 
@@ -235,19 +233,20 @@ for E in range(EPOCHS):
     C = alice(Q)
     
     if torch.isnan(C[0][0]):
-      raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Exploding Gradient')
+      raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Alice Exploding Gradient')
 
     Db = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([c, K], dim=0) for c in C]], dim=0)
     Pb = bob(Db)
 
-    # if torch.isnan(Pb[0][0]):
-    #   raise OverflowError(f'[BATCH {B}] {len(bob_running_loss)}: Exploding Gradient')
+    if torch.isnan(Pb[0][0]):
+      raise OverflowError(f'[BATCH {B}] {len(bob_running_loss)}: Bob Exploding Gradient')
 
+    C.detach()
     De = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([P0[r], P1[r], C[r]], dim=0) for r in range(BATCHLEN)]], dim=0)
     Re = eve(De)
 
     # if torch.isnan(Re[0][0]):
-    #   raise OverflowError(f'[BATCH {B}] {len(eve_running_loss)}: Exploding Gradient')
+    #   raise OverflowError(f'[BATCH {B}] {len(eve_running_loss)}: Eve Exploding Gradient')
 
     bob_err = 0
     for x in range(BATCHLEN):
@@ -259,17 +258,18 @@ for E in range(EPOCHS):
 
     bob_bits_err.append(bob_err)
     
-    bob_reconst_loss = dist(Pb, P)
-    eve_recogni_loss = dist(Re, torch.cat([torch.Tensor([1 - r, r]).unsqueeze(dim=0) for r in R], dim=0))
+    # bob_reconst_loss = dist(Pb, P) - dist(P, C)
 
-    # alice_loss = (BETA*bob_reconst_loss) - (OMEGA*dist(P, C)) - (GAMMA*eve_recogni_loss)
-    alice_loss = bob_reconst_loss - eve_recogni_loss - dist(P, C)
+    Pe = torch.cat([torch.Tensor([1 - r, r]).unsqueeze(dim=0) for r in R], dim=0)
+    eve_recogni_loss = dist(Re, Pe)
 
-    alice_running_loss.append(alice_loss.item())
-    bob_running_loss.append(bob_reconst_loss.item())
+    alice_bobrc_loss = BETA * dist(Pb, P) - GAMMA * dist(Re, Pe) - OMEGA * dist(P, C) 
+
+    # alice_running_loss.append(alice_loss.item())
+    bob_running_loss.append(alice_bobrc_loss.item())
     eve_running_loss.append(eve_recogni_loss.item())
 
-    writer.add_scalar('Training Loss', bob_reconst_loss.item(), E*BATCHLEN + B)
+    writer.add_scalar('Training Loss', alice_bobrc_loss.item(), E*BATCHLEN + B)
     writer.close()
         
     for param in alice.parameters():
@@ -278,15 +278,15 @@ for E in range(EPOCHS):
         writer.close()
 
 
-    bob_reconst_loss.backward(retain_graph=True)
+    alice_bobrc_loss.backward(retain_graph=True)
     eve_recogni_loss.backward(retain_graph=True)
-    alice_loss.backward(retain_graph=True)
+    # alice_loss.backward(retain_graph=True)
 
-    torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
+    # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
     torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
     torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
 
-    opt_alice.step()
+    # opt_alice.step()
     opt_bob.step()
     opt_eve.step()
 
@@ -345,6 +345,3 @@ plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
-
-
-# %%
