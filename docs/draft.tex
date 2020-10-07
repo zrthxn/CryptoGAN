@@ -1,7 +1,13 @@
-\documentclass[12pt]{article}
-% \documentclass[conference]{IEEEtran}
-
+\documentclass[conference]{IEEEtran}
+% \documentclass[12pt]{article}
 % \documentclass[sigconf]{acmart}
+
+\usepackage{lipsum}
+\usepackage{biblatex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{../resources/citations.bib}
+% \bibliographystyle
 
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -29,29 +35,35 @@
 % \acmPrice{15.00}
 % \acmISBN{978-1-4503-XXXX-X/18/06}
 
-\title{CryptoGAN: An approach to Neural Cryptography}
+\title{CryptoGAN: An Approach to Neural Cryptography}
 
-\author{Alisamar Husain}
 % \author{
-%   \IEEEauthorblockN{Alisamar Husain}
-%   \IEEEauthorblockA{
-%     Jamia Millia Islamia\\
-%     New Delhi, India
-%   }
+%   Alisamar Husain\\
+%   Jamia Millia Islamia University\\
+%   New Delhi, India
 % }
-% \affiliation{
-%   \institution{Rajiv Gandhi University}
-%   \streetaddress{Rono-Hills}
-%   \city{Doimukh}
-%   \state{Arunachal Pradesh}
-%   \country{India}
-% }
+\author{
+  \IEEEauthorblockN{Alisamar Husain}
+  \IEEEauthorblockA{
+    Jamia Millia Islamia University\\
+    New Delhi, India
+  }
+}
 
 \begin{document}
   \maketitle
 
   \begin{abstract}
-    asdkjnasd
+    \lipsum[1]
   \end{abstract}
+ 
+  \section{Introduction}
+  \lipsum[1]
 
+  This text is cited \cite{visualloss}
+
+  \section{Methodology}
+  \lipsum
 \end{document}
+
+\cite{}
