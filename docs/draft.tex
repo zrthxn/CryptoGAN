@@ -1,31 +1,36 @@
-\documentclass[12pt]{article}
+\documentclass[sigconf]{acmart}
 % \documentclass[conference]{IEEEtran}
-% \documentclass[sigconf]{acmart}
+% \documentclass[12pt]{article}
 
 \usepackage{lipsum}
-\usepackage{biblatex}
+\usepackage{graphicx}
+\usepackage{algorithmic}
+% \usepackage{cite}
+% \usepackage{amsmath,amssymb,amsfonts}
+% \usepackage{textcomp}
+% \usepackage{xcolor}
 
-% \bibliographystyle{IEEEtran}
-\bibliography{../resources/citations.bib}
-% \bibliographystyle
+% \def\BibTeX{{
+%   \rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+%   T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX
+% }}
 
-%%
-%% \BibTeX command to typeset BibTeX logo in the docs
-% \AtBeginDocument{%
-%   \providecommand\BibTeX{{%
-%     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX
-%   }}
-% }
+% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX
+  }}
+}
 
 %% Rights management information.  This information is sent to you
 %% when you complete the rights form.  These commands have SAMPLE
 %% values in them; it is your responsibility as an author to replace
 %% the commands and values with those provided to you when you
 %% complete the rights form.
-% \setcopyright{acmcopyright}
-% \copyrightyear{2018}
-% \acmYear{2018}
-% \acmDOI{10.1145/1122445.1122456}
+\setcopyright{acmcopyright}
+\copyrightyear{2018}
+\acmYear{2018}
+\acmDOI{10.1145/1122445.1122456}
 
 %% These commands are for a PROCEEDINGS abstract or paper.
 % \acmConference[Woodstock '18]{Woodstock '18: ACM Symposium on Neural
@@ -35,35 +40,57 @@
 % \acmPrice{15.00}
 % \acmISBN{978-1-4503-XXXX-X/18/06}
 
-\title{CryptoGAN: An Approach to Neural Cryptography}
-
-\author{
-  Alisamar Husain\\
-  Jamia Millia Islamia University\\
-  New Delhi, India
-}
 % \author{
-%   \IEEEauthorblockN{Alisamar Husain}
+%   \IEEEauthorblockN{1\textsuperscript{st} Alisamar Husain}
 %   \IEEEauthorblockA{
-%     Jamia Millia Islamia University\\
-%     New Delhi, India
+%     \textit{Jamia Millia Islamia University}\\
+%     New Delhi, India\\
+%   }
+%   \and
+%   \IEEEauthorblockN{2\textsuperscript{nd}Alisamar Husain}
+%   \IEEEauthorblockA{
+%     \textit{Jamia Millia Islamia University}\\
+%     New Delhi, India\\
+%     syed176412@st.jmi.ac.in
 %   }
 % }
 
 \begin{document}
-  \maketitle
+  \title{CryptoGAN: An Approach to Neural Cryptography}
+
+  \author{Alisamar Husain}
+  \authornotemark[1]
+  \email{syed176412@st.jmi.ac.in}
+  \affiliation{
+    \institution{Jamia Millia Islamia University}
+    \streetaddress{Maulana Mohammad Ali Jauhar Marg}
+    \city{New Delhi}
+    \state{Delhi}
+    \postcode{110025}
+  }
 
   \begin{abstract}
     \lipsum[1]
   \end{abstract}
+  
+  \keywords{datasets, neural networks, gaze detection, text tagging}
+  \begin{teaserfigure}
+    % \includegraphics[width=\textwidth]{sampleteaser}
+    \caption{Seattle Mariners at Spring Training, 2010.}
+    \Description{Enjoying the baseball game from the third-base
+    seats. Ichiro Suzuki preparing to bat.}
+    \label{fig:teaser}
+  \end{teaserfigure}
+
+  \maketitle
  
   \section{Introduction}
-  \lipsum[1]
+  This is my tiny Introduction with a nice 
+  little citation \cite{visualloss}
 
-  This text is cited \cite{visualloss}
-
-  \section{Methodology}
+  \section{Methodology} 
   \lipsum
+  
+  \bibliographystyle{ACM-Reference-Format}
+  \bibliography{../resources/citations}
 \end{document}
-
-\cite{}
