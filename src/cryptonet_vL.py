@@ -17,9 +17,10 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
+import seaborn as sns
 
 from matplotlib import pyplot as plt
-import seaborn as sns
+from mname import modelname
 
 VERSION = 25
 
@@ -131,8 +132,8 @@ class AttackerNetwork(nn.Module):
 
 BLOCKSIZE = 16
 EPOCHS = 10
-BATCHES = 1024 #* 16
-BATCHLEN = 16
+BATCHES = 256
+BATCHLEN = 64
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 PLAIN = [[
@@ -164,7 +165,7 @@ dist = nn.MSELoss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
-opt_bob = torch.optim.Adam(bob.parameters(), lr=8e-3, weight_decay=1e-5)
+opt_bob = torch.optim.Adam(bob.parameters(), lr=0.9, weight_decay=2e-4)
 opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-3, weight_decay=1e-5)
 
 graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
@@ -229,13 +230,13 @@ for E in range(EPOCHS):
       if torch.isnan(C[0]):
         raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Alice Exploding Gradient')
 
-      if torch.isnan(Pb[0][0]):
+      if torch.isnan(Pb[0]):
         raise OverflowError(f'[BATCH {B}] {len(bob_running_loss)}: Bob Exploding Gradient')
 
       C.detach()
       Re = eve(torch.cat([P0, P1, C], dim=0))
 
-      if torch.isnan(Re[0][0]):
+      if torch.isnan(Re[0]):
         raise OverflowError(f'[BATCH {B}] {len(eve_running_loss)}: Eve Exploding Gradient')
 
       bob_err = 0
@@ -330,3 +331,16 @@ plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
+
+
+# %%
+# Evaluation Plots
+
+
+
+# %%
+# Save Models
+
+torch.save(alice, '../models/cryptonet/' + modelname('Alice', f'{BLOCKSIZE}x3', f'v{VERSION}'))
+torch.save(bob, '../models/cryptonet/' + modelname('Bob', f'{BLOCKSIZE}x3', f'v{VERSION}'))
+torch.save(eve, '../models/cryptonet/' + modelname('Eve', f'{BLOCKSIZE}x3', f'v{VERSION}'))
