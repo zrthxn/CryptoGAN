@@ -195,10 +195,10 @@ opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5, betas=(0
 
 opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4)
 
-# if not DEBUGGING:
-#   graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
-#   writer.add_graph(alice, graph_ip)
-#   writer.close()
+if not DEBUGGING:
+  graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
+  writer.add_graph(alice, graph_ip)
+  writer.close()
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -231,7 +231,7 @@ print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
 
 alice.train()
 bob.train()
-# eve.train()
+eve.train()
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -259,13 +259,14 @@ for E in range(EPOCHS):
       debug('EVERE', Re)
       
       # Loss and BackProp
+      eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
+      bob_dec_loss = dist(Pb, P) + (1 - eve_adv_loss)** 2
+      
       opt_alice_bob.zero_grad()
-      bob_dec_loss = dist(Pb, P)
       bob_dec_loss.backward(retain_graph=True)
       opt_alice_bob.step()
 
       opt_eve.zero_grad()
-      eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
       eve_adv_loss.backward()
       opt_eve.step()
 
@@ -275,7 +276,7 @@ for E in range(EPOCHS):
 
       bob_acc = 0
       for b in range(BLOCKSIZE):
-        if P[b] == torch.abs(torch.round(Pb[b] - DECISION_MARGIN)):
+        if torch.abs(torch.round(Pb[b] - DECISION_MARGIN)) == P[b]:
           bob_acc += (1/BLOCKSIZE)
 
       bob_bits_acc.append(bob_acc)
@@ -290,7 +291,7 @@ for E in range(EPOCHS):
     if not DEBUGGING:
       writer.add_scalar('Training Loss', bob_dec_loss.item(), (E * BATCHES) + B)
       writer.add_scalar('Bit Accuracy', torch.Tensor([bob_acc]), (E * BATCHES) + B)
-      # writer.add_scalar('Adversary Loss', eve_adv_loss.item(), (E * BATCHES)  + B)
+      writer.add_scalar('Adversary Loss', eve_adv_loss.item(), (E * BATCHES)  + B)
       writer.close()
     
     if STOP:
