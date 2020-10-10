@@ -25,16 +25,19 @@ Coutinho, Murilo & Albuquerque, Robson & Borges, Fábio & García Villalba, Luis
   - Faster propagation
 - Random selection of which Plaintext to encrypt
   - All three P0, P1 and C go to Eve
+- Added Dense layers before the conv layers
+  - FC -> ReLU -> Conv1D -> Sigm
+  - Much better results, faster loss decent
 
-## Results (v20)
+## Results (v64)
 
-The loss is seen to reduce over time but doesnt actually reduce smoothly.
+The loss is seen to reduce over time. It does take a lot of time though.
 
-<img src="./graphs/loss_16E64x256v20.png" width="450px">
+**LR = 0.0008, WD = 0**
 
-The bit error was seen to drop to zero after a few iterations.
+<img src="./graphs/Training Loss [S].svg" width="100%">
 
-<img src="./graphs/error_16E64x256v20.png" width="450px">
+<br><br>
 
 ### Things to Try
 
