@@ -6,20 +6,20 @@ read -p "File Name (src/): " file
 
 # pemfile = '/mnt/c/Users/User/Desktop/zxaws.pem'
 
-sudo scp -i /mnt/c/Users/User/Desktop/zxaws.pem src/$file $ec2usr@$ec2ip:~/$file
+sudo scp -i /mnt/c/Users/User/Desktop/zxaws.pem src/$file $ec2usr@$ec2ip:~/src/$file
 
 # Server Area
-sudo ssh -l $ec2usr@$ec2ip -i /mnt/c/Users/User/Desktop/zxaws.pem
+sudo ssh $ec2usr@$ec2ip -i /mnt/c/Users/User/Desktop/zxaws.pem
 
-read -p "Start training? (Y/N) " start
+#read -p "Start training? (Y/N) " start
 
-if [$start == 'Y']
-then
-  python3 $file
-fi
+#if [$start == 'Y']
+#then
+#  python3 $file
+#fi
 
-echo "Quitting"
-logout
+#echo "Quitting"
+#logout
 # End Server Area
 
-echo "End"
+#echo "End"

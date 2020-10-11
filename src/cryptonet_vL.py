@@ -185,8 +185,8 @@ alice.apply(weights_init_normal)
 bob.apply(weights_init_normal)
 eve.apply(weights_init_normal)
 
-dist = nn.L1Loss()
-# dist = nn.MSELoss()
+# dist = nn.L1Loss()
+dist = nn.MSELoss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
