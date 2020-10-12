@@ -1,5 +1,7 @@
 # CryptoGAN
 
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/zrthxn/CryptoGAN)
+
 A GAN based approach to encrypts communication between two symmetrically secure parties.
 Based on the seminal paper by Abadi et al on Adversarial Neural Cryptography.
 
