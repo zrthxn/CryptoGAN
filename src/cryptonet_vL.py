@@ -1,7 +1,4 @@
 """
-Secure Neural Cryptography setup using GANs as described in the Coutinho Paper.
-To verify improvements on the previous design and make our own.
-
 Coutinho, Murilo & Albuquerque, Robson & Borges, Fábio & García Villalba, et al (2018). 
 Learning Perfectly Secure Cryptography to Protect Communications with 
 Adversarial Neural Cryptography. Sensors. 18. 10.3390/s18051306.
