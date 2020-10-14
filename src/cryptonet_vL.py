@@ -229,19 +229,11 @@ def trendline(data, deg=1):
  
   return trend
 
-# %%
-# Training loop
 alice_running_loss = []
 bob_running_loss = []
 eve_running_loss = []
 
 bob_bits_acc = []
-
-# Hyperparams
-BETA = 1.0
-GAMMA = 1.2
-OMEGA = 0.75
-DECISION_MARGIN = 0.1
 
 print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
@@ -250,7 +242,15 @@ alice.train()
 bob.train()
 eve.train()
 
+# %%
+# Training loop
 torch.autograd.set_detect_anomaly(True)
+
+# Hyperparams
+BETA = 1.0
+GAMMA = 1.2
+OMEGA = 0.75
+DECISION_MARGIN = 0.1
 
 STOP = False
 for E in range(EPOCHS):
@@ -264,28 +264,33 @@ for E in range(EPOCHS):
 
       R = random.randint(0, 1)
       P = torch.Tensor(X[R])
-      # debug('PLAIN', P)
+      debug('PLAIN', P)
             
       C = alice(torch.cat([P, K], dim=0))
-      # debug('CIPHR', C)
+      debug('CIPHR', C)
 
       Pb = bob(torch.cat([C, K], dim=0))
-      # debug('DCRPT', Pb)
+      debug('DCRPT', Pb)
 
-      Re = eve(torch.cat([P0, P1, C.detach()], dim=0))
-      # debug('EVERE', Re)
-      
       # Loss and BackProp
-      eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
-      bob_dec_loss = dist(Pb, P) + torch.square(1 - eve_adv_loss)
+      bob_dec_loss = dist(Pb, P)
       
       opt_alice_bob.zero_grad()
-      bob_dec_loss.backward(retain_graph=True)
-      opt_alice_bob.step()
 
-      opt_eve.zero_grad()
-      eve_adv_loss.backward(retain_graph=True)
-      opt_eve.step()
+      if B > BATCHES/2:
+        Re = eve(torch.cat([P0, P1, C.detach()], dim=0))
+        eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
+        bob_dec_loss = dist(Pb, P) + torch.square(1 - eve_adv_loss)
+      
+        bob_dec_loss.backward(retain_graph=True)
+        opt_alice_bob.step()
+
+        opt_eve.zero_grad()
+        eve_adv_loss.backward(retain_graph=True)
+        opt_eve.step()
+      else:
+        bob_dec_loss.backward(retain_graph=True)
+        opt_alice_bob.step()
 
       # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
       # torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
