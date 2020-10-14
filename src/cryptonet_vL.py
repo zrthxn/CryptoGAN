@@ -20,7 +20,7 @@ from torch.utils.tensorboard import SummaryWriter
 from matplotlib import pyplot as plt
 from mname import modelname
 
-VERSION = 61
+VERSION = 64
 
 DEBUGGING = False
 
@@ -43,7 +43,7 @@ class KeyholderNetwork(nn.Module):
 
     self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 4)
     self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
-    # self.fc3 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
+    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
     
     # self.norm = nn.BatchNorm1d(num_features=blocksize)
     
@@ -65,7 +65,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.entry(inputs)
 
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
     debug(inputs)
 
     inputs = self.fc1(inputs)
@@ -91,13 +91,14 @@ class KeyholderNetwork(nn.Module):
     
     inputs = inputs.view(self.blocksize)
 
-    # inputs = self.fc3(inputs)
-    # inputs = torch.sigmoid(inputs)
+    inputs = self.fc3(inputs)
+    inputs = torch.relu(inputs)
 
     debug(inputs)
 
-    # f* = [1 - cos(10a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
+    # f* = [1 - cos(a)]/2
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = torch.div(1 - inputs, 2)
     inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
@@ -110,15 +111,17 @@ class AttackerNetwork(nn.Module):
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize * 3)
 
-    self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 4)
-    self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize)
-    self.fc3 = nn.Linear(in_features=blocksize, out_features=2)
+    self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 6)
+    self.fc2 = nn.Linear(in_features=blocksize * 6, out_features=blocksize * 4)
+    self.fc3 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
+    self.fc4 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
+    self.fc5 = nn.Linear(in_features=blocksize, out_features=2)
 
   def forward(self, inputs):
     inputs = self.entry(inputs)
     
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
 
     inputs = self.fc1(inputs)
     inputs = torch.relu(inputs)
@@ -127,11 +130,17 @@ class AttackerNetwork(nn.Module):
     inputs = torch.relu(inputs)
 
     inputs = self.fc3(inputs)
+    inputs = torch.relu(inputs)
+
+    inputs = self.fc4(inputs)
+    inputs = torch.relu(inputs)
+
+    inputs = self.fc5(inputs)
     inputs = torch.softmax(inputs, dim=0)
 
     # f* = [1 - cos(a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
-    inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
 
@@ -145,7 +154,7 @@ def weights_init_normal(m):
 
 # %%
 # Data and Proprocessing
-BLOCKSIZE = 8
+BLOCKSIZE = 4
 EPOCHS = 16
 BATCHES = 256
 BATCHLEN = 64
@@ -182,20 +191,31 @@ alice.apply(weights_init_normal)
 bob.apply(weights_init_normal)
 eve.apply(weights_init_normal)
 
+# CUDA
+cuda = torch.cuda.is_available()
+device = torch.device('cuda') if cuda else torch.device('cpu')
+if cuda:
+  torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+alice.to(device)
+bob.to(device)
+eve.to(device)
+
 # dist = nn.L1Loss()
 dist = nn.MSELoss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
 ab_params = itertools.chain(alice.parameters(), bob.parameters())
-opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5, betas=(0.1, 0.99))
+opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5)
 
 opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4)
 
 if not DEBUGGING:
-  graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
+  graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0)
   writer.add_graph(alice, graph_ip)
   writer.close()
+
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -244,27 +264,27 @@ for E in range(EPOCHS):
 
       R = random.randint(0, 1)
       P = torch.Tensor(X[R])
-      debug('PLAIN', P)
+      # debug('PLAIN', P)
             
       C = alice(torch.cat([P, K], dim=0))
-      debug('CIPHR', C)
+      # debug('CIPHR', C)
 
       Pb = bob(torch.cat([C, K], dim=0))
-      debug('DCRPT', Pb)
+      # debug('DCRPT', Pb)
 
       Re = eve(torch.cat([P0, P1, C.detach()], dim=0))
-      debug('EVERE', Re)
+      # debug('EVERE', Re)
       
       # Loss and BackProp
       eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
-      bob_dec_loss = dist(Pb, P) + (1 - eve_adv_loss)** 2
+      bob_dec_loss = dist(Pb, P) + torch.square(1 - eve_adv_loss)
       
       opt_alice_bob.zero_grad()
       bob_dec_loss.backward(retain_graph=True)
       opt_alice_bob.step()
 
       opt_eve.zero_grad()
-      eve_adv_loss.backward()
+      eve_adv_loss.backward(retain_graph=True)
       opt_eve.step()
 
       # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
@@ -283,7 +303,7 @@ for E in range(EPOCHS):
       if STOP:
         break
 
-    recalc_plain()
+    # recalc_plain()
 
     if not DEBUGGING:
       writer.add_scalar('Training Loss', bob_dec_loss.item(), (E * BATCHES) + B)
@@ -294,7 +314,7 @@ for E in range(EPOCHS):
     if STOP:
       break
   
-  recalc_key()
+  # recalc_key()
   
   if STOP:
     break
