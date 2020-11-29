@@ -1,0 +1,4 @@
+{
+  "latex-workshop.latex.recipe.default": "pdflatex ➞ bibtex ➞ pdflatex × 2",
+  "editor.formatOnSave": true
+}
