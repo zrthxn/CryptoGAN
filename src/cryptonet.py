@@ -8,23 +8,25 @@ Adversarial Neural Cryptography. Sensors. 18. 10.3390/s18051306.
 # Imports Section
 import math
 import random
+import itertools
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
-import wandb
-
-from matplotlib import pyplot as plt
 import seaborn as sns
 
-VERSION = 22
+from torch.utils.tensorboard import SummaryWriter
+from matplotlib import pyplot as plt
+from mname import modelname
 
-sns.set()
-writer = SummaryWriter(f'training/cryptonet_v{VERSION}')
+VERSION = 64
 
-# wbrun = wandb.init(project="cryptonet")
+DEBUGGING = False
+
+def debug(*ip):
+  if DEBUGGING:
+    print(*ip)
 
 # %%
 # Define networks
@@ -39,16 +41,16 @@ class KeyholderNetwork(nn.Module):
     # Entry layer verifies the size of inputs before proceeding
     self.entry = nn.Identity(blocksize * 2)
 
-    self.fc1 = nn.Linear(in_features=blocksize*2, out_features=blocksize*4)
-    self.fc2 = nn.Linear(in_features=blocksize*4, out_features=blocksize*2)
-    self.fc3 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
+    self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 4)
+    self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
+    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
     
-    self.norm = nn.BatchNorm1d(num_features=blocksize)
+    # self.norm = nn.BatchNorm1d(num_features=blocksize)
     
-    # self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
-    # self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
-    # self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
-    # self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
+    self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
+    self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
+    self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
+    self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
  
   def squash(self, input_):
     squared_norm = (input_ ** 2).sum(-1, keepdim=True)
@@ -64,28 +66,42 @@ class KeyholderNetwork(nn.Module):
 
     # f = arccos(1-2b)
     # inputs = torch.acos(1 - torch.mul(inputs, 2))
-    inputs = torch.acos(1 - torch.mul(inputs, 2)) / 4
-
-    # inputs = torch.sigmoid(inputs)
-    # inputs = F.hardsigmoid(inputs)
+    debug(inputs)
 
     inputs = self.fc1(inputs)
     inputs = torch.relu(inputs)
 
     inputs = self.fc2(inputs)
     inputs = torch.relu(inputs)
+
+    inputs = inputs.unsqueeze(dim=0).unsqueeze(dim=0)
+    debug(inputs)
     
+    inputs = self.conv1(inputs)
+    inputs = torch.sigmoid(inputs)
+
+    inputs = self.conv2(inputs)
+    inputs = torch.sigmoid(inputs)
+    
+    inputs = self.conv3(inputs)
+    inputs = torch.sigmoid(inputs)
+
+    inputs = self.conv4(inputs)
+    inputs = torch.sigmoid(inputs)
+    
+    inputs = inputs.view(self.blocksize)
+
     inputs = self.fc3(inputs)
-    inputs = F.leaky_relu(inputs)
-    
+    inputs = torch.relu(inputs)
+
+    debug(inputs)
+
     # f* = [1 - cos(a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
-    
-    inputs = self.norm(inputs)
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = torch.div(1 - inputs, 2)
+    inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
-    # return inputs #.view(self.blocksize)
     return inputs
-
 
 
 class AttackerNetwork(nn.Module):
@@ -95,47 +111,53 @@ class AttackerNetwork(nn.Module):
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize * 3)
 
-    self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 4)
-    self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize)
-    self.fc3 = nn.Linear(in_features=blocksize, out_features=2)
-
-  # def free_energy(self, v):
-  #   vbias_term = v.mv(self.v_bias)
-  #   wx_b = F.linear(v,self.W,self.h_bias)
-  #   zr = torch. Variable(torch.zeros(wx_b.size()))
-  #   mask = torch.max(zr, wx_b)
-  #   hidden_term = (((wx_b - mask).exp() + (-mask).exp()).log() + (mask)).sum(1)
-  #   return (-hidden_term - vbias_term).mean()
+    self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 6)
+    self.fc2 = nn.Linear(in_features=blocksize * 6, out_features=blocksize * 4)
+    self.fc3 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
+    self.fc4 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
+    self.fc5 = nn.Linear(in_features=blocksize, out_features=2)
 
   def forward(self, inputs):
     inputs = self.entry(inputs)
     
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
 
     inputs = self.fc1(inputs)
-    inputs = torch.sigmoid(inputs)
-
-    # f* = [1 - cos(a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
+    inputs = torch.relu(inputs)
 
     inputs = self.fc2(inputs)
-    inputs = torch.sigmoid(inputs)
+    inputs = torch.relu(inputs)
 
     inputs = self.fc3(inputs)
+    inputs = torch.relu(inputs)
 
+    inputs = self.fc4(inputs)
+    inputs = torch.relu(inputs)
+
+    inputs = self.fc5(inputs)
     inputs = torch.softmax(inputs, dim=0)
+
+    # f* = [1 - cos(a)]/2
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
 
+def weights_init_normal(m):
+  classname = m.__class__.__name__
+  if classname.find("Conv") != -1:
+    torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
+  elif classname.find("BatchNorm2d") != -1:
+    torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
+    torch.nn.init.constant_(m.bias.data, 0.0)
 
 # %%
 # Data and Proprocessing
-
-BLOCKSIZE = 16
-EPOCHS = 4
-BATCHES = 1024
-BATCHLEN = 16
+BLOCKSIZE = 4
+EPOCHS = 16
+BATCHES = 256
+BATCHLEN = 64
 
 KEY = [random.randint(0, 1) for i in range(BLOCKSIZE)]
 PLAIN = [[
@@ -152,26 +174,48 @@ def recalc_plain():
       [random.randint(0, 1) for y in range(BLOCKSIZE)]
     ] for i in range(BATCHLEN)]
 
+sns.set()
+writer = None
+
+if not DEBUGGING:
+  writer = SummaryWriter(f'training/cryptonet_vL{VERSION}')
+
 # %%
 # Initialize Networks
-
 alice = KeyholderNetwork(BLOCKSIZE)
 bob = KeyholderNetwork(BLOCKSIZE)
 eve = AttackerNetwork(BLOCKSIZE)
 
-dist = nn.L1Loss()
-# dist = nn.MSELoss()
+# Initialize weights
+alice.apply(weights_init_normal)
+bob.apply(weights_init_normal)
+eve.apply(weights_init_normal)
+
+# CUDA
+cuda = torch.cuda.is_available()
+device = torch.device('cuda') if cuda else torch.device('cpu')
+if cuda:
+  torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
+alice.to(device)
+bob.to(device)
+eve.to(device)
+
+# dist = nn.L1Loss()
+dist = nn.MSELoss()
 # dist = nn.CrossEntropyLoss()
 # dist = nn.BCELoss()
 
-# opt_alice = torch.optim.Adam(alice.parameters(), lr=8e-4, weight_decay=1e-5)
-opt_bob = torch.optim.Adam(bob.parameters(), lr=8e-4, weight_decay=1e-5)
-opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4, weight_decay=1e-5)
+ab_params = itertools.chain(alice.parameters(), bob.parameters())
+opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5)
 
-graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0).unsqueeze(0)
-writer.add_graph(alice, graph_ip)
-writer.add_graph(bob, graph_ip)
-writer.close() 
+opt_eve = torch.optim.Adam(eve.parameters(), lr=2e-4)
+
+if not DEBUGGING:
+  graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0)
+  writer.add_graph(alice, graph_ip)
+  writer.close()
+
 
 def trendline(data, deg=1):
   for _ in range(deg):
@@ -185,21 +229,11 @@ def trendline(data, deg=1):
  
   return trend
 
-# %%
-# Training loop
-
 alice_running_loss = []
 bob_running_loss = []
 eve_running_loss = []
 
-bob_bits_err = []
-eve_bits_err = []
-
-# Hyperparams
-BETA = 1.0
-GAMMA = 1.2
-OMEGA = 1.5
-DECISION_BOUNDARY = 0.5
+bob_bits_acc = []
 
 print(f'Model v{VERSION}')
 print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
@@ -208,7 +242,15 @@ alice.train()
 bob.train()
 eve.train()
 
-# wbrun.watch(alice, log='all')
+# %%
+# Training loop
+torch.autograd.set_detect_anomaly(True)
+
+# Hyperparams
+BETA = 1.0
+GAMMA = 1.2
+OMEGA = 0.75
+DECISION_MARGIN = 0.1
 
 STOP = False
 for E in range(EPOCHS):
@@ -216,91 +258,68 @@ for E in range(EPOCHS):
   K = torch.Tensor(KEY)
 
   for B in range(BATCHES):
-    # opt_alice.zero_grad()
-    opt_bob.zero_grad()
-    opt_eve.zero_grad()
+    for X in PLAIN:
+      P0 = torch.Tensor(X[0])
+      P1 = torch.Tensor(X[1])
 
-    P0 = torch.Tensor([P[0] for P in PLAIN])
-    P1 = torch.Tensor([P[1] for P in PLAIN])
+      R = random.randint(0, 1)
+      P = torch.Tensor(X[R])
+      debug('PLAIN', P)
+            
+      C = alice(torch.cat([P, K], dim=0))
+      debug('CIPHR', C)
 
-    R = torch.randint(2, (BATCHLEN,))
-    P = torch.cat([s.unsqueeze(dim=0) for s in [torch.Tensor(PLAIN[r][R[r].item()]) for r in range(BATCHLEN)]], dim=0)
-    
-    Q = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([p, K], dim=0) for p in P]], dim=0)
-    C = alice(Q)
-    
-    if torch.isnan(C[0][0]):
-      raise OverflowError(f'[BATCH {B}] {len(alice_running_loss)}: Alice Exploding Gradient')
+      Pb = bob(torch.cat([C, K], dim=0))
+      debug('DCRPT', Pb)
 
-    Db = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([c, K], dim=0) for c in C]], dim=0)
-    Pb = bob(Db)
+      # Loss and BackProp
+      bob_dec_loss = dist(Pb, P)
+      
+      opt_alice_bob.zero_grad()
 
-    if torch.isnan(Pb[0][0]):
-      raise OverflowError(f'[BATCH {B}] {len(bob_running_loss)}: Bob Exploding Gradient')
+      if B > BATCHES/2:
+        Re = eve(torch.cat([P0, P1, C.detach()], dim=0))
+        eve_adv_loss = dist(Re, torch.Tensor([1 - R, R]))
+        bob_dec_loss = dist(Pb, P) + torch.square(1 - eve_adv_loss)
+      
+        bob_dec_loss.backward(retain_graph=True)
+        opt_alice_bob.step()
 
-    C.detach()
-    De = torch.cat([s.unsqueeze(dim=0) for s in [torch.cat([P0[r], P1[r], C[r]], dim=0) for r in range(BATCHLEN)]], dim=0)
-    Re = eve(De)
+        opt_eve.zero_grad()
+        eve_adv_loss.backward(retain_graph=True)
+        opt_eve.step()
+      else:
+        bob_dec_loss.backward(retain_graph=True)
+        opt_alice_bob.step()
 
-    # if torch.isnan(Re[0][0]):
-    #   raise OverflowError(f'[BATCH {B}] {len(eve_running_loss)}: Eve Exploding Gradient')
+      # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
+      # torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
+      # torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
 
-    bob_err = 0
-    for x in range(BATCHLEN):
+      bob_acc = 0
       for b in range(BLOCKSIZE):
-        if (P[x][b] == 0 and Pb[x][b] >= DECISION_BOUNDARY):
-          bob_err += 1
-        if (P[x][b] == 1 and Pb[x][b] < DECISION_BOUNDARY):
-          bob_err += 1
+        if torch.abs(torch.round(Pb[b] - DECISION_MARGIN)) == P[b]:
+          bob_acc += (1/BLOCKSIZE)
 
-    bob_bits_err.append(bob_err)
-    
-    # bob_reconst_loss = dist(Pb, P) - dist(P, C)
+      bob_bits_acc.append(bob_acc)
+      bob_running_loss.append(bob_dec_loss.item())
+      eve_running_loss.append(eve_adv_loss.item())
 
-    Pe = torch.cat([torch.Tensor([1 - r, r]).unsqueeze(dim=0) for r in R], dim=0)
-    eve_recogni_loss = dist(Re, Pe)
+      if STOP:
+        break
 
-    alice_bobrc_loss = BETA * dist(Pb, P) - GAMMA * dist(Re, Pe) - OMEGA * dist(P, C) 
+    # recalc_plain()
 
-    # alice_running_loss.append(alice_loss.item())
-    bob_running_loss.append(alice_bobrc_loss.item())
-    eve_running_loss.append(eve_recogni_loss.item())
-
-    writer.add_scalar('Training Loss', alice_bobrc_loss.item(), E*BATCHLEN + B)
-    writer.close()
-        
-    for param in alice.parameters():
-      if param.grad is not None:
-        writer.add_histogram('Gradient', param.grad, E*BATCHLEN + B)
-        writer.close()
-
-
-    alice_bobrc_loss.backward(retain_graph=True)
-    eve_recogni_loss.backward(retain_graph=True)
-    # alice_loss.backward(retain_graph=True)
-
-    # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
-    torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
-    torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
-
-    # opt_alice.step()
-    opt_bob.step()
-    opt_eve.step()
-
-    recalc_plain()
-
-    # # Stop when bits error is consistently zero for 1 batch
-    # if bob_bits_err[-BATCHLEN:] == [0 for _ in range(BATCHLEN)]:
-    #   break
+    if not DEBUGGING:
+      writer.add_scalar('Training Loss', bob_dec_loss.item(), (E * BATCHES) + B)
+      writer.add_scalar('Bit Accuracy', torch.Tensor([bob_acc]), (E * BATCHES) + B)
+      writer.add_scalar('Adversary Loss', eve_adv_loss.item(), (E * BATCHES)  + B)
+      writer.close()
     
     if STOP:
       break
-
-  recalc_key()
-
-  # Stop when bit error is consistently zero for 3 Batches
-  if bob_bits_err[-3 * BATCHLEN:] == [0 for _ in range(3 * BATCHLEN)]:
-    STOP = True
+  
+  # recalc_key()
   
   if STOP:
     break
@@ -311,7 +330,7 @@ print('Finished Training')
 # %%
 # Evaluation Plots
 sns.set_style('whitegrid')
-sf = min(int(BATCHES * EPOCHS/10), 50)
+sf = 5000 #min(int(BATCHES * EPOCHS/10), 50)
 
 TITLE_TAG = f'{BLOCKSIZE} bits, {dist}, B={BETA} G={GAMMA} W={OMEGA}'
 FILE_TAG = f'{EPOCHS}E{BATCHES}x{BATCHLEN}v{VERSION}'
@@ -321,8 +340,9 @@ SAVEPLOT = False
 # SAVEPLOT = True
 
 # plt.plot(trendline(alice_running_loss[:1000], sf))
-plt.plot(trendline(bob_running_loss, sf))
-plt.plot(trendline(eve_running_loss, sf))
+plt.plot(bob_running_loss)
+plt.plot(trendline(bob_running_loss, sf), color='black')
+# plt.plot(trendline(eve_running_loss, sf))
 plt.legend(['Bob', 'Eve'], loc='upper right')
 # plt.legend(['Alice', 'Bob', 'Eve'], loc='upper right')
 # plt.xlim(len(alice_running_loss) - 1000, len(alice_running_loss))
@@ -333,8 +353,8 @@ if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/loss_{FILE_TAG}.png', dpi=400)
 plt.show()
 
-plt.plot(bob_bits_err, color='red')
-plt.plot(trendline(bob_bits_err, sf), color='black')
+plt.plot(bob_bits_acc, color='red')
+plt.plot(trendline(bob_bits_acc, sf), color='black')
 plt.legend(['Actual', 'Trend'], loc='upper right')
 plt.xlabel('Samples')
 plt.ylabel(f'Bit error (SF {sf})')
@@ -342,3 +362,16 @@ plt.title(f'Bit Error - {TITLE_TAG}')
 if SAVEPLOT:
   plt.savefig(f'../models/cryptonet/graphs/error_{FILE_TAG}.png', dpi=400)
 plt.show()
+
+
+# %%
+# Evaluation Plots
+
+
+
+# %%
+# Save Models
+
+torch.save(alice, '../models/cryptonet/' + modelname('Alice', f'{BLOCKSIZE}x3', f'v{VERSION}'))
+torch.save(bob, '../models/cryptonet/' + modelname('Bob', f'{BLOCKSIZE}x3', f'v{VERSION}'))
+torch.save(eve, '../models/cryptonet/' + modelname('Eve', f'{BLOCKSIZE}x3', f'v{VERSION}'))
