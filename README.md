@@ -1,36 +1,24 @@
 # CryptoGAN
 
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/zrthxn/CryptoGAN)
+![License](https://img.shields.io/github/license/zrthxn/cryptogan)
+![Last commit](https://img.shields.io/github/last-commit/zrthxn/cryptogan)
 
 A GAN based approach to encrypts communication between two symmetrically secure parties.
-Based on the seminal paper by Abadi et al on Adversarial Neural Cryptography.
+Based on the seminal paper by Abadi et al (2017) on [Adversarial Neural Cryptography](https://arxiv.org/pdf/1610.06918.pdf).
 
-### Topics to Explore
+This project is an attempt to implement the concepts laid out in the literature and produce results that indicate the efficacy of neural cryptography.
 
-Programming an adversarial network
+<img src="./docs/ref/anc.png" width="45%">
+<img src="./docs/ref/anclayers.png" width="45%">
 
-- PyTorch implementation
-- theory and practice
+### Abstract
+In this project, we demonstrate that neural networks can learn to protect communications, 
+and build a network which can encrypt and decrypt bit-strings.
+The learning does not require prescribing a particular set of cryptographic algorithms, 
+nor indicating ways of applying these algorithms. We do not prescribe specific cryptographic 
+algorithms to these neural networks; instead, we train end-to-end, adversarially. 
 
-Model a network like an encryptor
-
-- architecture of net like crypto function
-- measure loss against actual function
-- is the net able to reliably encrypt?
-- can a decryptor net be made to do the reverse?
-- model a decryptor net, what's avg data loss
-
-Generative adversarial nets for decryption
-
-- using GAN evesdropper to break security
-- verification of paper on learning adversarial security
-- can the generator work against another Eve?
-- the perfect attacker, what would it be?
-
-One shot learning to build the perfect attacker
-
-- can one shot be used to train an Eve to be perfect?
-- how quickly can the Eve be trained?
-- can the Eve imitate the generator?
-- can the Eve be trained to forge hashes/checksums?
-- train an Eve to imitate SHA behaviour? (I think no)
+## Status
+The project is being developed with a focus on finding a more effective strategy and use-case.
+The most viable field of application seems to currently be in natual language. 
