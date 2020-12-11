@@ -9,8 +9,8 @@ Based on the seminal paper by Abadi et al (2017) on [Adversarial Neural Cryptogr
 
 This project is an attempt to implement the concepts laid out in the literature and produce results that indicate the efficacy of neural cryptography.
 
-<img src="./docs/ref/anc.png" width="45%">
-<img src="./docs/ref/anclayers.png" width="45%">
+<img src="./docs/ref/anc.png" width="40%">
+<img src="./docs/ref/anclayers.png" width="40%">
 
 ### Abstract
 In this project, we demonstrate that neural networks can learn to protect communications, 
