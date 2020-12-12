@@ -8,7 +8,7 @@ A GAN based approach to encrypts communication between two symmetrically secure 
 Based on the seminal paper by Abadi et al (2017) on [Adversarial Neural Cryptography](https://arxiv.org/pdf/1610.06918.pdf).
 
 This project is an attempt to implement the concepts laid out in the literature and produce results that indicate the efficacy of neural cryptography.
-This work was produced as an academic project for the B.Tech Final Year Minor Project and is a work in progress. The work done and results obtained from experiments performed
+This work was produced as an academic project for the B.Tech Final Year Minor Project and is a **work in progress.** The work done and results obtained from experiments performed
 over the course of a semester are contained in the <a href="./docs/Minor Report/minorrep.pdf">project report</a>.
 
 <img src="./docs/ref/anc.png" width="45%"> <img src="./docs/ref/anclayers.png" width="45%">
