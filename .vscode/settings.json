@@ -1,7 +1,5 @@
 {
   "python.venvPath": "/home/zrthxn/.local/share/virtualenvs",
-  "editor.formatOnType": true,
-  "editor.formatOnSave": true,
   "python.formatting.provider": "black",
   "python.linting.pylintArgs": [
     "--generated-members=numpy.*,torch.*,cv2.*",
