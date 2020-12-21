@@ -3,19 +3,14 @@ import random
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from datagen import KeyGenerator as Key
-from datagen import PlainGenerator as Plain
+from cryptonet.datagen import KeyGenerator as Key
+from cryptonet.datagen import PlainGenerator as Plain
 
-from cryptonet import KeyholderNetwork, AttackerNetwork
-from cryptonet import weights_init_normal
+from cryptonet.model import KeyholderNetwork, AttackerNetwork
+from cryptonet.model import weights_init_normal
 
 BLOCKSIZE = 4
-BATCHLEN = 64
-
 VERSION = 64
-
-KeyGenerator = Key(BLOCKSIZE)
-PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
 
 class TrainingSession():
   def __init__(self, debug = False):
@@ -31,7 +26,7 @@ class TrainingSession():
 
     # CUDA
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    torch.set_default_tensor_type('torch.cuda.FloatTensor' if torch.cuda.is_available() else 'torch.Tensor')
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor' if torch.cuda.is_available() else 'torch.Tensor')
 
     self.alice.to(device)
     self.bob.to(device)
@@ -49,9 +44,9 @@ class TrainingSession():
     if self.debug:
       print(*ip)
 
-  def train(self, EPOCHS = 16, BATCHES = 256):
-    KEY = KeyGenerator.batchgen()
-    PLAIN = PlainGenerator.batchgen()
+  def train(self, BATCHLEN = 64, BATCHES = 256, EPOCHS = 16):
+    KeyGenerator = Key(BLOCKSIZE)
+    PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
 
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5)
@@ -59,7 +54,7 @@ class TrainingSession():
     opt_eve = torch.optim.Adam(self.eve.parameters(), lr=2e-4)
 
     if not self.debug:
-      graph_ip = torch.cat([torch.Tensor(PLAIN[0][0]), torch.Tensor(KEY)], dim=0)
+      graph_ip = torch.cat([torch.Tensor(PlainGenerator.single()), torch.Tensor(KeyGenerator.single())], dim=0)
       self.writer.add_graph(self.alice, graph_ip)
       self.writer.close()
 
@@ -85,6 +80,9 @@ class TrainingSession():
 
     for E in range(EPOCHS):  
       print(f'Epoch {E + 1}/{EPOCHS}')
+      
+      KEY = KeyGenerator.batch()
+      PLAIN = PlainGenerator.batch()
       K = torch.Tensor(KEY)
 
       for B in range(BATCHES):
@@ -104,23 +102,19 @@ class TrainingSession():
 
           # Loss and BackProp
           bob_dec_loss = self.lossfn(Pb, P)
+          Re = self.eve(torch.cat([P0, P1, C.detach()], dim=0))
+          eve_adv_loss = self.lossfn(Re, torch.Tensor([1 - R, R]))
+          bob_dec_loss = self.lossfn(Pb, P) + torch.square(1 - eve_adv_loss)
           
           opt_alice_bob.zero_grad()
+          opt_eve.zero_grad()
+
+          bob_dec_loss.backward(retain_graph=True)
+          opt_alice_bob.step()
 
           if B > BATCHES/2:
-            Re = self.eve(torch.cat([P0, P1, C.detach()], dim=0))
-            eve_adv_loss = self.lossfn(Re, torch.Tensor([1 - R, R]))
-            bob_dec_loss = self.lossfn(Pb, P) + torch.square(1 - eve_adv_loss)
-          
-            bob_dec_loss.backward(retain_graph=True)
-            opt_alice_bob.step()
-
-            opt_eve.zero_grad()
             eve_adv_loss.backward(retain_graph=True)
             opt_eve.step()
-          else:
-            bob_dec_loss.backward(retain_graph=True)
-            opt_alice_bob.step()
 
           # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
           # torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)

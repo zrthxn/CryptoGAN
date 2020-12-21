@@ -1,5 +1,8 @@
 from cryptonet import training
 
 session = training.TrainingSession()
-
-alice_loss, bob_loss, eve_loss = session.train()
+trained = session.train(
+            BATCHLEN=32,
+            BATCHES=256,
+            EPOCHS=10
+          )

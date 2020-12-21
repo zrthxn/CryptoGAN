@@ -2,6 +2,7 @@
   "python.venvPath": "/home/zrthxn/.local/share/virtualenvs",
   "python.formatting.provider": "black",
   "python.linting.pylintArgs": [
+    "--init-hook='import sys; sys.path.append('/mnt/d/Alisamar/Desktop/CryptoGAN')'",
     "--generated-members=numpy.*,torch.*,cv2.*",
     "--disable=C0111,C0115,C0116,unused-import,unused-argument,trailing-newlines,trailing-whitespace,bad-indentation,invalid-name,line-too-long"
   ]

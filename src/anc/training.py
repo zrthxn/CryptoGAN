@@ -3,10 +3,10 @@ import random
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from datagen import KeyGenerator as Key
-from datagen import PlainGenerator as Plain
+from anc.datagen import KeyGenerator as Key
+from anc.datagen import PlainGenerator as Plain
 
-from anc import KeyholderNetwork, AttackerNetwork
+from anc.model import KeyholderNetwork, AttackerNetwork
 
 BLOCKSIZE = 12
 BATCHLEN = 64
