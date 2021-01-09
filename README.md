@@ -2,6 +2,7 @@
 
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/zrthxn/CryptoGAN)
 ![Last commit](https://img.shields.io/github/last-commit/zrthxn/CryptoGAN)
+![Lines of code](https://img.shields.io/tokei/lines/github/zrthxn/CryptoGAN)
 
 A GAN based approach to encrypts communication between two symmetrically secure parties.
 Based on the seminal paper by Abadi et al (2017) on [Adversarial Neural Cryptography](https://arxiv.org/pdf/1610.06918.pdf).
