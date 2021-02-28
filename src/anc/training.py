@@ -26,6 +26,7 @@ class TrainingSession():
     # CUDA
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     torch.set_default_tensor_type('torch.cuda.FloatTensor' if torch.cuda.is_available() else 'torch.Tensor')
+    print('Using device', device)
 
     self.alice.to(device)
     self.bob.to(device)
@@ -34,7 +35,7 @@ class TrainingSession():
     self.lossfn = torch.nn.L1Loss()
 
     self.debug = debug
-    self.writer = SummaryWriter(f'training/cryptonet_vL{VERSION}') if not debug else None
+    self.writer = SummaryWriter(f'training/anc_vL{VERSION}') if not debug else None
 
   def log(self, *ip):
     if self.debug:

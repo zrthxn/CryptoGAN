@@ -26,7 +26,8 @@ class TrainingSession():
 
     # CUDA
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    # torch.set_default_tensor_type('torch.cuda.FloatTensor' if torch.cuda.is_available() else 'torch.Tensor')
+    # torch.set_default_tensor_type('torch.cuda.Tensor' if torch.cuda.is_available() else 'torch.Tensor')
+    print('Using device', device)
 
     self.alice.to(device)
     self.bob.to(device)
