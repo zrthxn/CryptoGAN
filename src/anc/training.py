@@ -1,5 +1,4 @@
 import itertools
-import random
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -34,7 +33,7 @@ class TrainingSession():
     self.PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
-    self.writer = SummaryWriter(f'training/anc_vL{VERSION}') if not debug else None
+    self.writer = SummaryWriter(f'training/anc_v{VERSION}') if not debug else None
 
   def log(self, *ip):
     if self.debug:
@@ -77,9 +76,6 @@ class TrainingSession():
           # Linear loss
           alice_loss = bob_reconst_loss - eve_reconst_loss
 
-          # Quad loss
-          # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
-
           bob_reconst_loss.backward(retain_graph=True)
           eve_reconst_loss.backward(retain_graph=True)
           alice_loss.backward(retain_graph=True)
@@ -87,14 +83,14 @@ class TrainingSession():
           opt_alice.step()
           opt_eve.step()
 
-          alice_running_loss.append(alice_loss.item())
-          bob_running_loss.append(bob_reconst_loss.item())
-          eve_running_loss.append(eve_reconst_loss.item())
+        alice_running_loss.append(alice_loss.item())
+        bob_running_loss.append(bob_reconst_loss.item())
+        eve_running_loss.append(eve_reconst_loss.item())
 
-          if not self.debug:
-            self.writer.add_scalar('Training Loss', bob_reconst_loss.item(), (E * BATCHES) + B)
-            self.writer.add_scalar('Adversary Loss', eve_reconst_loss.item(), (E * BATCHES)  + B)
-            self.writer.close()
+        if not self.debug:
+          self.writer.add_scalar('Training Loss', bob_reconst_loss.item(), (E * BATCHES) + B)
+          self.writer.add_scalar('Adversary Loss', eve_reconst_loss.item(), (E * BATCHES)  + B)
+          self.writer.close()
 
     self.log('Finished Training')
     return (alice_running_loss, bob_running_loss, eve_running_loss)
