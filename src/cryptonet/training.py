@@ -20,18 +20,18 @@ class TrainingSession():
     self.eve = AttackerNetwork(BLOCKSIZE)
 
     # Initialize weights
-    self.alice.apply(weights_init_normal)
-    self.bob.apply(weights_init_normal)
-    self.eve.apply(weights_init_normal)
+    # self.alice.apply(weights_init_normal)
+    # self.bob.apply(weights_init_normal)
+    # self.eve.apply(weights_init_normal)
 
-    # CUDA
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    # torch.set_default_tensor_type('torch.cuda.Tensor' if torch.cuda.is_available() else 'torch.Tensor')
-    print('Using device', device)
+    # # CUDA
+    # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    # # torch.set_default_tensor_type('torch.cuda.Tensor' if torch.cuda.is_available() else 'torch.Tensor')
+    # print('Using device', device)
 
-    self.alice.to(device)
-    self.bob.to(device)
-    self.eve.to(device)
+    # self.alice.to(device)
+    # self.bob.to(device)
+    # self.eve.to(device)
 
     # self.lossfn = torch.nn.L1Loss()
     self.lossfn = torch.nn.MSELoss()
@@ -51,7 +51,6 @@ class TrainingSession():
 
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice_bob = torch.optim.Adam(ab_params, lr=0.0008, weight_decay=1e-5)
-
     opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.001)
 
     if not self.debug:
