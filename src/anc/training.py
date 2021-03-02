@@ -48,7 +48,7 @@ class TrainingSession():
 
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice = torch.optim.Adam(ab_params, lr=0.0008)
-    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.0008)
+    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.001)
 
     alice_running_loss = []
     bob_running_loss = []
