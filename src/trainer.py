@@ -1,5 +1,5 @@
 from anc import training as ancTraining
-from cryptonet import training as cryptonetTraining
+# from cryptonet import training as cryptonetTraining
 
 BLOCKSIZE = 12
 BATCHLEN = 64

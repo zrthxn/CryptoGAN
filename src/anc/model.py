@@ -5,14 +5,9 @@ arXiv 2016, arXiv:1610.06918.
 """
 
 # Imports Section
-import math
-import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-
-VERSION = 15
 
 # Define networks
 class KeyholderNetwork(nn.Module):
