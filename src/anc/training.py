@@ -54,57 +54,66 @@ class TrainingSession():
     # eve_bits_err = []
 
     # Hyperparams
-    DECISION_BOUNDARY = 0.5
+    # DECISION_BOUNDARY = 0.5 
+    
+    KEYS = self.KeyGenerator.batchgen(BATCHES)
+    PLAINS = self.PlainGenerator.batchgen(BATCHES)
 
-    for B in range(BATCHES):
-      KEY = self.KeyGenerator.batchgen()
-      PLAIN = self.PlainGenerator.batchgen()
+    print(f'ANC Model v{VERSION}')
+    print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
-      for P in PLAIN:
-        P = torch.Tensor(P)
-        K = torch.Tensor(KEY)
+    for E in range(EPOCHS):
+      print(f'Epoch {E + 1}/{EPOCHS}')
 
-        cipher = self.alice(torch.cat([P, K], dim=0))
-        # cipher.detach()
+      for B in range(BATCHES):
+        PLAIN = torch.Tensor(PLAINS[B])
+        KEY = torch.Tensor(KEYS[B])
 
-        Pb = self.bob(torch.cat([cipher, K], dim=0))
-        Pe = self.eve(cipher)
+        for P in PLAIN:
+          P = torch.Tensor(P)
+          K = torch.Tensor(KEY)
 
-        # bob_err = 0
-        # eve_err = 0
-        # for b in range(self.blocksize):
-        #   if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
-        #     bob_err += 1
-        #   if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
-        #     bob_err += 1
+          cipher = self.alice(torch.cat([P, K], dim=0))
+          # cipher.detach()
 
-        #   if (P[b] == 0 and Pe[b] >= DECISION_BOUNDARY):
-        #     eve_err += 1
-        #   if (P[b] == 1 and Pe[b] < DECISION_BOUNDARY):
-        #     eve_err += 1
+          Pb = self.bob(torch.cat([cipher, K], dim=0))
+          Pe = self.eve(cipher)
 
-        # bob_bits_err.append(bob_err)
-        # eve_bits_err.append(eve_err)
+          # bob_err = 0
+          # eve_err = 0
+          # for b in range(self.blocksize):
+          #   if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
+          #     bob_err += 1
+          #   if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
+          #     bob_err += 1
 
-        bob_reconst_loss = self.lossfn(Pb, P)
-        eve_reconst_loss = self.lossfn(Pe, P)
+          #   if (P[b] == 0 and Pe[b] >= DECISION_BOUNDARY):
+          #     eve_err += 1
+          #   if (P[b] == 1 and Pe[b] < DECISION_BOUNDARY):
+          #     eve_err += 1
 
-        # Linear loss
-        alice_loss = bob_reconst_loss - eve_reconst_loss
+          # bob_bits_err.append(bob_err)
+          # eve_bits_err.append(eve_err)
 
-        # Quad loss
-        # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
+          bob_reconst_loss = self.lossfn(Pb, P)
+          eve_reconst_loss = self.lossfn(Pe, P)
 
-        bob_reconst_loss.backward(retain_graph=True)
-        eve_reconst_loss.backward(retain_graph=True)
-        alice_loss.backward(retain_graph=True)
+          # Linear loss
+          alice_loss = bob_reconst_loss - eve_reconst_loss
 
-        opt_alice.step()
-        opt_eve.step()
+          # Quad loss
+          # alice_loss = bob_reconst_loss - (((BLOCKSIZE/2) - eve_reconst_loss)**2/(BLOCKSIZE/2)**2)
 
-        alice_running_loss.append(alice_loss.item())
-        bob_running_loss.append(bob_reconst_loss.item())
-        eve_running_loss.append(eve_reconst_loss.item())
+          bob_reconst_loss.backward(retain_graph=True)
+          eve_reconst_loss.backward(retain_graph=True)
+          alice_loss.backward(retain_graph=True)
+
+          opt_alice.step()
+          opt_eve.step()
+
+          alice_running_loss.append(alice_loss.item())
+          bob_running_loss.append(bob_reconst_loss.item())
+          eve_running_loss.append(eve_reconst_loss.item())
 
     self.log('Finished Training')
     return (alice_running_loss, bob_running_loss, eve_running_loss)

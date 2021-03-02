@@ -64,7 +64,7 @@ class TrainingSession():
 
     bob_bits_acc = []
 
-    print(f'Model v{VERSION}')
+    print(f'Cryptonet Model v{VERSION}')
     print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
 
     self.alice.train()
