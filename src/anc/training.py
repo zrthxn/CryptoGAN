@@ -49,12 +49,6 @@ class TrainingSession():
     alice_running_loss = []
     bob_running_loss = []
     eve_running_loss = []
-
-    # bob_bits_err = []
-    # eve_bits_err = []
-
-    # Hyperparams
-    # DECISION_BOUNDARY = 0.5 
     
     KEYS = self.KeyGenerator.batchgen(BATCHES)
     PLAINS = self.PlainGenerator.batchgen(BATCHES)
@@ -74,26 +68,8 @@ class TrainingSession():
           K = torch.Tensor(KEY)
 
           cipher = self.alice(torch.cat([P, K], dim=0))
-          # cipher.detach()
-
           Pb = self.bob(torch.cat([cipher, K], dim=0))
           Pe = self.eve(cipher)
-
-          # bob_err = 0
-          # eve_err = 0
-          # for b in range(self.blocksize):
-          #   if (P[b] == 0 and Pb[b] >= DECISION_BOUNDARY):
-          #     bob_err += 1
-          #   if (P[b] == 1 and Pb[b] < DECISION_BOUNDARY):
-          #     bob_err += 1
-
-          #   if (P[b] == 0 and Pe[b] >= DECISION_BOUNDARY):
-          #     eve_err += 1
-          #   if (P[b] == 1 and Pe[b] < DECISION_BOUNDARY):
-          #     eve_err += 1
-
-          # bob_bits_err.append(bob_err)
-          # eve_bits_err.append(eve_err)
 
           bob_reconst_loss = self.lossfn(Pb, P)
           eve_reconst_loss = self.lossfn(Pe, P)
@@ -114,6 +90,11 @@ class TrainingSession():
           alice_running_loss.append(alice_loss.item())
           bob_running_loss.append(bob_reconst_loss.item())
           eve_running_loss.append(eve_reconst_loss.item())
+
+          if not self.debug:
+            self.writer.add_scalar('Training Loss', bob_reconst_loss.item(), (E * BATCHES) + B)
+            self.writer.add_scalar('Adversary Loss', eve_reconst_loss.item(), (E * BATCHES)  + B)
+            self.writer.close()
 
     self.log('Finished Training')
     return (alice_running_loss, bob_running_loss, eve_running_loss)
