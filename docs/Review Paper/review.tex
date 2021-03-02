@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass{proc}
 
 \usepackage{a4}
 \usepackage{lipsum}
@@ -9,41 +9,97 @@
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{textcomp}
 
-\title{A Review on Adversarial Neural Cryptography}
+\usepackage{geometry}[margin=1.25in]
 
+\title{A Review of Adversarial Neural Cryptography}
 \author{
   {\bf Alisamar Husain}\\
-  Dept. of Electrical Engineering\\
+  Dept. of Electrical Engineering, \\
   Jamia Millia Islamia
 }
 
-\date{}
+% \date{}
+
+% \author{Alisamar Husain}
+% \email{syed176412@st.jmi.ac.in}
+% \affiliation{
+%   \institution{Jamia Millia Islamia University}
+%   \streetaddress{Maulana Mohammad Ali Jauhar Marg}
+%   \city{New Delhi}
+%   \state{Delhi}
+%   \postcode{110025}
+%   \country{India}
+% }
 
 \begin{document}
   \maketitle
 
   \begin{abstract}
-    Artificial neural networks are well known for their ability to selectively explore the solution
-    space of a given problem. This feature finds a natural niche of application in the field
-    of cryptanalysis. At the same time, neural networks offer a new approach to attack ciphering
-    algorithms based on the principle that any function could be reproduced by a neural network,
-    which is a powerful proven computational tool that can be used to find the inverse-function of
-    any cryptographic algorithm.
+    Artificial neural networks are well known for their ability to selectively 
+    explore the solution space of a given problem.
+    One of the recent applications of this feature is in the field of neural 
+    cryptography, which provides an opportunity to use ANNs to encrypt data 
+    such that it cannot be decrypted by an attacker.
 
     In this paper we examine the efficacy, feasibility and 
-    general practicality of the use of Adversarial Neural Cryptography, 
+    general practicality of the use of {\it adversarial neural cryptography}, 
     as coined by Abadi et al. in \cite{seminalanc}, and neural cryptography
-    in general. We test the recommended systems and examine their use in 
-    data transmission systems for the purpose of encrypting data, and also test
-    them against the standard algorithms in for this purpose today.
+    in general. We test systems recommended in the literature and examine their 
+    use in data transmission systems for the purpose of encrypting data from
+    the perspective of securing a communication channel.
   \end{abstract}
  
   \section{Introduction}
+  The field of cryptography is broadly concerned with algorithms and protocols 
+  that ensure the secrecy and integrity of information. Cryptographic mechanisms are 
+  typically described as programs or Turing machines. By this definition, an
+  appropriate neural network can possibly be considered a cryptographic function.
+
+    \subsection{Terminology}
+    Certain terms are frequently used while talking about cryptographic mechanisms
+    and it is beneficial to have an understanding of what these refer to. Some
+    of these will be used in this paper to commonly identify certain parts of the 
+    system and some are abbreviations made for convenience.
+
+    A {\bf party} is a machine, or actor in general, which is using a communication
+    channel to communicate with another machine. There are two major types of parties
+    which we are concerned with, {\bf participants and attackers.}
+    
+    A {\bf participant} is a party which actively takes part in the communication and
+    sends messages on the channel. The goal of encryption is to ensure that the 
+    communication between any two parties can only be intercepted and understood 
+    by them.
+
+    An {\bf attacker} is a party which attempts to intercept and understand the
+    communication between two participants.
+  
+  \paragraph{Attackers}
+  Attackers are also described in those terms, with bounds on their complexity 
+  (e.g., limite to polynomial time) and on their chances of success 
+  (e.g., limited to a negligible probability). A mechanism is deemed secure if 
+  it achieves its goal against all attackers. For instance, an encryption
+  algorithm is said to be secure if no attacker can extract information about 
+  plaintexts from ciphertexts.
+  Modern cryptography provides rigorous versions of such definitions 
+  (Goldwasser \& Micali, 1984).
+
+    \subsection{Symmetric Encryption}
+    
+
   
   \section{Related Work}
   
-  \section{Testing Methodology}
-  \lipsum
+  \section{Methodology}
+  We use a simple setup in order to build and test the networks. The models are 
+  first implemented using the Python programming language and after obtaining a 
+  suitably trained and validated model, we can move on to testing. 
+
+    \subsection{Tools Used}
+    The models are implemented using PyTorch, a popular framework for building
+    neural networks in Python. The models are built per the specification given in
+    the literature and trained with the help of several common Python libraries.
+    We use Tensorboard to monitor the training process and log the training metadata.
+
   
   \section{Results}
     \subsection{ANC}
@@ -52,5 +108,6 @@
   \section{Conclusions}
 
   \bibliographystyle{IEEEtran}
+  % \bibliographystyle{acm}
   \bibliography{../../resources/citations}
 \end{document}
