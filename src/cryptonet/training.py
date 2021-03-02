@@ -50,9 +50,9 @@ class TrainingSession():
     PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
 
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
-    opt_alice_bob = torch.optim.Adam(ab_params, lr=1e-3, weight_decay=1e-5)
+    opt_alice_bob = torch.optim.Adam(ab_params, lr=0.0008, weight_decay=1e-5)
 
-    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=2e-4)
+    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.001)
 
     if not self.debug:
       graph_ip = torch.cat([torch.Tensor(PlainGenerator.single()), torch.Tensor(KeyGenerator.single())], dim=0)
