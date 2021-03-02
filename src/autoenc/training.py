@@ -2,56 +2,46 @@ import itertools
 from torch import Tensor
 from torch import nn, optim
 
-from model import Encoder
-from datagen import dataset, sine, ghetto_tqdm
+from autoenc.model import Encoder
+from autoenc.datagen import dataset, sine, ghetto_tqdm
 
-# enc = Encoder([250, 225, 200, 175, 125, 96, 60, 30, 10, 2])
-enc = Encoder([250, 125, 2])
-dec = Encoder([2, 125, 250])
+class TrainingSession():
+  def __init__(self):
+    # enc = Encoder([250, 225, 200, 175, 125, 96, 60, 30, 10, 2])
+    self.enc = Encoder([250, 125, 2])
+    self.dec = Encoder([2, 125, 250])
 
-# def dec(r):
-#   r = r.tolist()
-#   r = Tensor(sine(r[0]) + sine(r[1]))
-#   r.requires_grad = False
-#   return r
+    self.lossfn = nn.L1Loss()
 
-def test():
-  pass
+  def test(self):
+    pass
 
-def train(DATA, EPOCHS):
-  lfn = nn.L1Loss()
-  prm = itertools.chain(enc.parameters(), dec.parameters())
-  opt = optim.Adam(prm, lr=1e-5)
+  def train(self, BATCHES, EPOCHS):
+    prm = itertools.chain(self.enc.parameters(), self.dec.parameters())
+    opt = optim.Adam(prm, lr=1e-3)
 
-  avgloss = 0
-  maxloss = 0
-  for sample in DATA:
-    X = Tensor(sample[0])
-    # y = Tensor(sample[1])
-    
-    # for _ in range(EPOCHS):
-    w = enc(X)
-    z = dec(w)
+    avgloss = 0
+    maxloss = 0
 
-    loss = lfn(X, z)
-    loss.backward()
-    opt.step()
+    data = dataset(BATCHES)
 
-    avgloss += loss.item()/(len(DATA))
+    for E in EPOCHS:
+      for B in range(BATCHES):
+        X = Tensor(data[B])
+        # y = Tensor(sample[1])
+        
+        # for _ in range(EPOCHS):
+        w = self.enc(X)
+        z = self.dec(w)
 
-    if loss.item() > maxloss:
-      maxloss = loss.item()
-  
-  return avgloss, maxloss
+        loss = self.lossfn(X, z)
+        loss.backward()
+        opt.step()
 
+        avgloss += loss.item()/len(data)
 
-# Init
-if __name__ == "__main__":
-  EPOCHS = 5
-  BATCHES = 1024 * 2
-  for B in range(BATCHES):
-    data = dataset(64)
-    avg, mxa = train(data, EPOCHS)
-
-    print(f'{ghetto_tqdm(B, BATCHES)} : Avg {avg}, High {mxa}')
-  
+        if loss.item() > maxloss:
+          maxloss = loss.item()
+      
+    print(f'{ghetto_tqdm(B, BATCHES)} : Avg {avgloss}, High {maxloss}')
+    return avgloss, maxloss
