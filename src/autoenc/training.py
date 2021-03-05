@@ -13,9 +13,6 @@ class TrainingSession():
 
     self.lossfn = nn.L1Loss()
 
-  def test(self):
-    pass
-
   def train(self, BATCHES, EPOCHS):
     prm = itertools.chain(self.enc.parameters(), self.dec.parameters())
     opt = optim.Adam(prm, lr=1e-3)

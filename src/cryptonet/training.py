@@ -9,6 +9,8 @@ from cryptonet.datagen import PlainGenerator as Plain
 from cryptonet.model import KeyholderNetwork, AttackerNetwork
 from cryptonet.model import weights_init_normal
 
+from autoenc.datagen import ghetto_tqdm
+
 BLOCKSIZE = 4
 VERSION = 64
 
@@ -86,6 +88,8 @@ class TrainingSession():
       K = torch.Tensor(KEY)
 
       for B in range(BATCHES):
+        # print(ghetto_tqdm(B, BATCHES))
+
         for X in PLAIN:
           P0 = torch.Tensor(X[0])
           P1 = torch.Tensor(X[1])

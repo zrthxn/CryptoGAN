@@ -7,6 +7,8 @@ from anc.datagen import PlainGenerator as Plain
 
 from anc.model import KeyholderNetwork, AttackerNetwork
 
+from autoenc.datagen import ghetto_tqdm
+
 VERSION = 15
 
 class TrainingSession():
@@ -62,6 +64,8 @@ class TrainingSession():
         PLAIN = torch.Tensor(PLAINS[B])
         KEY = torch.Tensor(KEYS[B])
 
+        # print(ghetto_tqdm(B, BATCHES))
+
         for P in PLAIN:
           P = torch.Tensor(P)
           K = torch.Tensor(KEY)
@@ -93,4 +97,4 @@ class TrainingSession():
           self.writer.close()
 
     self.log('Finished Training')
-    return (alice_running_loss, bob_running_loss, eve_running_loss)
+    return (self.alice, self.bob, self.eve), (alice_running_loss, bob_running_loss, eve_running_loss)

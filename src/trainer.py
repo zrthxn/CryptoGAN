@@ -1,14 +1,16 @@
 from anc import training as ancTrainer
 # from cryptonet import training as cryptonetTrainer
 
-BLOCKSIZE = 12
+BLOCKSIZE = 16
 BATCHLEN = 64
 
 BATCHES = 256
-EPOCHS = 10
+EPOCHS = 1
 
-session = ancTrainer.TrainingSession(debug=True, BLOCKSIZE=BLOCKSIZE, BATCHLEN=BATCHLEN)
-trained = session.train(BATCHES=BATCHES, EPOCHS=EPOCHS)
+session = ancTrainer.TrainingSession(BLOCKSIZE=16, BATCHLEN=64)
+trained = session.train(BATCHES=256, EPOCHS=1)
+
+models, losses = trained
 
 # session = cryptonetTrainer.TrainingSession(BLOCKSIZE, BATCHLEN)
 # trained = session.train(BATCHES, EPOCHS)

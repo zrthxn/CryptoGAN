@@ -26,6 +26,12 @@ def trendline(data, deg=1):
     data = trend
  
   return trend
+
+
+# def ghetto_tqdm(d, t, l = 10):
+#   done = int(l*(d/t))
+#   repeat = lambda c, i: ''.join([c for _ in range(i)])
+#   print(f'{d}/{t} [{repeat("=", done - 1)}>{repeat(".", l - (done - 1))}]')
   
 
 # plt.plot(trendline(alice_running_loss[:1000], sf))
