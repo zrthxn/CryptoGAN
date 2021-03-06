@@ -6,7 +6,7 @@ from anc import training as ancTrainer
 
 debug = False
 
-session = ancTrainer.TrainingSession(debug, BLOCKSIZE=16, BATCHLEN=64)
+session = ancTrainer.TrainingSession(debug, BLOCKSIZE=16, BATCHLEN=16)
 # session = cryptonetTrainer.TrainingSession(BLOCKSIZE, BATCHLEN)
 trained = session.train(BATCHES=24, EPOCHS=1)
 

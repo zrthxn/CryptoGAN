@@ -1,5 +1,7 @@
 import itertools
 import torch
+from tqdm import tqdm
+
 from torch.utils.tensorboard import SummaryWriter
 
 from anc.datagen import KeyGenerator as Key
@@ -50,17 +52,25 @@ class TrainingSession():
     alice_running_loss = []
     bob_running_loss = []
     eve_running_loss = []
-    
-    KEYS = self.KeyGenerator.batchgen(BATCHES)
-    PLAINS = self.PlainGenerator.batchgen(BATCHES)
 
     print(f'ANC Model v{VERSION}')
     print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
+    self.alice.train()
+    self.bob.train()
+    self.eve.train()
+
+    # Training loop
+    torch.autograd.set_detect_anomaly(True)
+    
+    KEYS = self.KeyGenerator.batchgen(BATCHES)
+    PLAINS = self.PlainGenerator.batchgen(BATCHES)
+    print(f'Generated {BATCHES} batches of data')
+
     for E in range(EPOCHS):
       print(f'Epoch {E + 1}/{EPOCHS}')
 
-      for B in range(BATCHES):
+      for B in tqdm(range(BATCHES)):
         PLAIN = torch.Tensor(PLAINS[B])
         KEY = torch.Tensor(KEYS[B])
 

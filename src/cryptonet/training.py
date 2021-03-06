@@ -1,6 +1,8 @@
 import itertools
 import random
 import torch
+from tqdm import tqdm
+
 from torch.utils.tensorboard import SummaryWriter
 
 from cryptonet.datagen import KeyGenerator as Key
@@ -11,11 +13,12 @@ from cryptonet.model import weights_init_normal
 
 from autoenc.datagen import ghetto_tqdm
 
-BLOCKSIZE = 4
 VERSION = 1.1
 
 class TrainingSession():
-  def __init__(self, debug = False):
+  def __init__(self, debug = False, BLOCKSIZE = 16, BATCHLEN = 64):
+    self.blocksize = BLOCKSIZE
+    
     # Initialize Networks
     self.alice = KeyholderNetwork(BLOCKSIZE)
     self.bob = KeyholderNetwork(BLOCKSIZE)
@@ -40,6 +43,9 @@ class TrainingSession():
     # self.lossfn = torch.nn.CrossEntropyLoss()
     # self.lossfn = torch.nn.BCELoss()
 
+    self.KeyGenerator = Key(BLOCKSIZE)
+    self.PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
+
     self.debug = debug
     self.writer = SummaryWriter(f'training/cryptonet_vL{VERSION}') if not debug else None
 
@@ -47,18 +53,15 @@ class TrainingSession():
     if self.debug:
       print(*ip)
 
-  def train(self, BATCHLEN = 64, BATCHES = 256, EPOCHS = 16):
-    KeyGenerator = Key(BLOCKSIZE)
-    PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
-
+  def train(self, BATCHES = 256, EPOCHS = 16):
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice_bob = torch.optim.Adam(ab_params, lr=0.0008, weight_decay=1e-5)
     opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.001)
 
-    if not self.debug:
-      graph_ip = torch.cat([torch.Tensor(PlainGenerator.single()), torch.Tensor(KeyGenerator.single())], dim=0)
-      self.writer.add_graph(self.alice, graph_ip)
-      self.writer.close()
+    # if not self.debug:
+    #   graph_ip = torch.cat([torch.Tensor(self.PlainGenerator.single()), torch.Tensor(self.KeyGenerator.single())], dim=0)
+    #   self.writer.add_graph(self.alice, graph_ip)
+    #   self.writer.close()
 
     alice_running_loss = []
     bob_running_loss = []
@@ -67,7 +70,7 @@ class TrainingSession():
     bob_bits_acc = []
 
     print(f'Cryptonet Model v{VERSION}')
-    print(f'Training with {BATCHES * BATCHLEN} samples over {EPOCHS} epochs')
+    print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
     self.alice.train()
     self.bob.train()
@@ -80,14 +83,17 @@ class TrainingSession():
     DECISION_MARGIN = 0.1
     STOP = False
 
+    KEYS = self.KeyGenerator.batchgen(BATCHES)
+    PLAINS = self.PlainGenerator.batchgen(BATCHES)
+    print(f'Generated {BATCHES} batches of data')
+
     for E in range(EPOCHS):  
       print(f'Epoch {E + 1}/{EPOCHS}')
-      
-      KEY = KeyGenerator.batch()
-      PLAIN = PlainGenerator.batch()
-      K = torch.Tensor(KEY)
 
-      for B in range(BATCHES):
+      for B in tqdm(range(BATCHES)):
+        PLAIN = torch.Tensor(PLAINS[B])
+        KEY = torch.Tensor(KEYS[B])
+        K = torch.Tensor(KEY)
         # print(ghetto_tqdm(B, BATCHES))
 
         for X in PLAIN:
@@ -125,9 +131,9 @@ class TrainingSession():
           # torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
 
           bob_acc = 0
-          for b in range(BLOCKSIZE):
+          for b in range(self.blocksize):
             if torch.abs(torch.round(Pb[b] - DECISION_MARGIN)) == P[b]:
-              bob_acc += (1/BLOCKSIZE)
+              bob_acc += (1/self.blocksize)
 
           bob_bits_acc.append(bob_acc)
           bob_running_loss.append(bob_dec_loss.item())

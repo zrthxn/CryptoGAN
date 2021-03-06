@@ -5,10 +5,10 @@ class KeyGenerator():
     self.blocksize = BLOCKSIZE
   
   def single(self):
-    return [random.randint(0, 1) for i in range(self.blocksize)]
+    return [random.randint(0, 1) for _ in range(self.blocksize)]
 
-  def batch(self):
-    return [random.randint(0, 1) for i in range(self.blocksize)]
+  def batchgen(self, BATCHES):
+    return [ self.single() for _ in BATCHES ]
 
 class PlainGenerator():
   def __init__(self, BLOCKSIZE, BATCHLEN):
@@ -16,7 +16,9 @@ class PlainGenerator():
     self.batchlen = BATCHLEN
   
   def single(self):
-    return [random.randint(0, 1) for y in range(self.blocksize)]
+    return [random.randint(0, 1) for _ in range(self.blocksize)]
 
-  def batch(self):
-    return [[self.single(), self.single()] for i in range(self.batchlen)]
+  def batchgen(self, BATCHES):
+    return [
+      [[self.single(), self.single()] for _ in range(self.batchlen)] 
+    for _ in BATCHES]

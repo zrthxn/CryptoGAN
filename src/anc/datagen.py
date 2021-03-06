@@ -14,4 +14,5 @@ class PlainGenerator():
   
   def batchgen(self, BATCHES):
     return [
-      [[random.randint(0, 1) for _ in range(self.blocksize)] for _ in range(self.batchlen)] for _ in range(BATCHES)]
+      [[random.randint(0, 1) for _ in range(self.blocksize)] for _ in range(self.batchlen)] 
+    for _ in range(BATCHES)]
