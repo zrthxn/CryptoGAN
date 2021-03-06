@@ -12,7 +12,7 @@ from cryptonet.model import weights_init_normal
 from autoenc.datagen import ghetto_tqdm
 
 BLOCKSIZE = 4
-VERSION = 64
+VERSION = 1.1
 
 class TrainingSession():
   def __init__(self, debug = False):
@@ -149,4 +149,4 @@ class TrainingSession():
         break
 
     self.log('Finished Training')
-    return (alice_running_loss, bob_running_loss, eve_running_loss)
+    return (self.alice, self.bob, self.eve), (alice_running_loss, bob_running_loss, eve_running_loss)

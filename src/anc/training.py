@@ -9,16 +9,16 @@ from anc.model import KeyholderNetwork, AttackerNetwork
 
 from autoenc.datagen import ghetto_tqdm
 
-VERSION = 15
+VERSION = 1.0
 
 class TrainingSession():
   def __init__(self, debug = False, BLOCKSIZE = 16, BATCHLEN = 64):
     self.blocksize = BLOCKSIZE
     
     # Initialize Networks
-    self.alice = KeyholderNetwork(BLOCKSIZE)
-    self.bob = KeyholderNetwork(BLOCKSIZE)
-    self.eve = AttackerNetwork(BLOCKSIZE)
+    self.alice = KeyholderNetwork("Alice", BLOCKSIZE)
+    self.bob = KeyholderNetwork("Bob", BLOCKSIZE)
+    self.eve = AttackerNetwork("Eve", BLOCKSIZE)
 
     # CUDA
     # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

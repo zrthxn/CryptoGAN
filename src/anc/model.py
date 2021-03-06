@@ -11,11 +11,12 @@ import torch.nn.functional as F
 
 # Define networks
 class KeyholderNetwork(nn.Module):
-  def __init__(self, blocksize):
+  def __init__(self, name, blocksize):
     super(KeyholderNetwork, self).__init__()
     
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize * 2)
+    self.name = name
 
     self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 2)
     
@@ -47,11 +48,12 @@ class KeyholderNetwork(nn.Module):
     return inputs.view(self.blocksize)
 
 class AttackerNetwork(nn.Module):
-  def __init__(self, blocksize):
+  def __init__(self, name, blocksize):
     super(AttackerNetwork, self).__init__()
     
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize)
+    self.name = name
 
     self.fc1 = nn.Linear(in_features=blocksize, out_features=blocksize * 2)
     
