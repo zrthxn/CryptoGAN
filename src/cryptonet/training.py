@@ -13,7 +13,7 @@ from cryptonet.model import weights_init_normal
 
 from autoenc.datagen import ghetto_tqdm
 
-VERSION = 1.1
+VERSION = '1.1'
 
 class TrainingSession():
   def __init__(self, debug = False, BLOCKSIZE = 16, BATCHLEN = 64):

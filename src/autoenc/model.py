@@ -2,31 +2,33 @@ import torch
 from torch import nn
 from torch import functional as F
 
-
-class LinearBlock(nn.Module):
-  def __init__(self, inf, opf, act = nn.GELU):
-    super(LinearBlock, self).__init__()
-    self.fcl = nn.Linear(in_features=inf, out_features=opf)
-    self.act = act()
-  
-  def forward(self, x):
-    return self.act(self.fcl(x))
-
-
 class Encoder(nn.Module):
-  def __init__(self, shape):
+  def __init__(self):
     super(Encoder, self).__init__()
 
-    self.layers = list()
-    for i in range(len(shape) - 1):
-      if not isinstance(shape[i], int):
-        raise TypeError('Shape must be a list of type INT only')
+    self.model = nn.Sequential([
+      *self.conv_block()
+    ])
 
-      self.layers.append(LinearBlock(shape[i], shape[i+1], nn.Sigmoid))
-    
-    self.model = nn.Sequential(*self.layers)
+  def conv_block(self):
+    return [
+      nn.Conv2d(in_channels=1, out_channels=1, kernel_size=(2,2), stride=1),
+      nn.MaxPool2d(kernel_size=(2,2), stride=1),
+      # activation
+    ]
 
   def forward(self, x):
     x = self.model(x)
     return x
 
+class Decoder(nn.Module):
+  def __init__(self):
+    super(Decoder, self).__init__()
+
+    self.model = nn.Sequential([
+      nn.Linear(in_features=8, out_features=8)
+    ])
+  
+  def forward(self, x):
+    x = self.model(x)
+    return x
