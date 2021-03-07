@@ -11,7 +11,7 @@ from anc.model import KeyholderNetwork, AttackerNetwork
 
 from autoenc.datagen import ghetto_tqdm
 
-VERSION = 1.0
+VERSION = '1.0'
 
 class TrainingSession():
   def __init__(self, debug = False, BLOCKSIZE = 16, BATCHLEN = 64):
@@ -23,15 +23,15 @@ class TrainingSession():
     self.eve = AttackerNetwork("Eve", BLOCKSIZE)
 
     # CUDA
-    # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     # torch.set_default_tensor_type('torch.cuda.FloatTensor' if torch.cuda.is_available() else 'torch.Tensor')
-    # print('Using device', device)
+    print('Using device', device)
 
-    # self.alice.to(device)
-    # self.bob.to(device)
-    # self.eve.to(device)
+    self.alice.to(device)
+    self.bob.to(device)
+    self.eve.to(device)
 
-    self.lossfn = torch.nn.L1Loss()
+    self.l1_loss = torch.nn.L1Loss()
     
     self.KeyGenerator = Key(BLOCKSIZE)
     self.PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
@@ -69,12 +69,11 @@ class TrainingSession():
 
     for E in range(EPOCHS):
       print(f'Epoch {E + 1}/{EPOCHS}')
+      train_turn = 0
 
       for B in tqdm(range(BATCHES)):
         PLAIN = torch.Tensor(PLAINS[B])
         KEY = torch.Tensor(KEYS[B])
-
-        # print(ghetto_tqdm(B, BATCHES))
 
         for P in PLAIN:
           P = torch.Tensor(P)
@@ -84,18 +83,25 @@ class TrainingSession():
           Pb = self.bob(torch.cat([cipher, K], dim=0))
           Pe = self.eve(cipher)
 
-          bob_reconst_loss = self.lossfn(Pb, P)
-          eve_reconst_loss = self.lossfn(Pe, P)
+          bob_reconst_loss = self.l1_loss(Pb, P)
+          eve_reconst_loss = self.l1_loss(Pe, P)
 
-          # Linear loss
-          alice_loss = bob_reconst_loss - eve_reconst_loss
+          # Quadratic loss
+          alice_loss = bob_reconst_loss - ((1 - eve_reconst_loss/(self.blocksize/2)) ** 2)
 
-          bob_reconst_loss.backward(retain_graph=True)
-          eve_reconst_loss.backward(retain_graph=True)
-          alice_loss.backward(retain_graph=True)
+          if train_turn == 0:
+            # Train Alice-Bob for 1 turn
+            bob_reconst_loss.backward(retain_graph=True)
+            alice_loss.backward(retain_graph=True)
+            opt_alice.step()
+          else:
+            # Train Eve for 2 turns
+            eve_reconst_loss.backward(retain_graph=True)
+            opt_eve.step()
 
-          opt_alice.step()
-          opt_eve.step()
+        train_turn += 1
+        if train_turn >= 2:
+          train_turn = 0
 
         alice_running_loss.append(alice_loss.item())
         bob_running_loss.append(bob_reconst_loss.item())

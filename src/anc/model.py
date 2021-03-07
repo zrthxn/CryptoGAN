@@ -43,7 +43,7 @@ class KeyholderNetwork(nn.Module):
     inputs = torch.sigmoid(inputs)
     
     inputs = self.conv4(inputs)
-    inputs = F.hardsigmoid(inputs)
+    inputs = torch.tanh(inputs)
 
     return inputs.view(self.blocksize)
 
@@ -80,6 +80,6 @@ class AttackerNetwork(nn.Module):
     inputs = torch.sigmoid(inputs)
     
     inputs = self.conv4(inputs)
-    inputs = F.hardsigmoid(inputs)
+    inputs = torch.tanh(inputs)
 
     return inputs.view(self.blocksize)
