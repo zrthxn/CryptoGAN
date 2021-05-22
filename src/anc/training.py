@@ -1,6 +1,8 @@
 import torch
 import itertools
 from logging import info
+from datetime import datetime
+from os import path
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
@@ -32,14 +34,14 @@ class TrainingSession():
     self.bob.to(device)
     self.eve.to(device)
 
-    self.l1_loss = torch.nn.L1Loss()
+    self.l1_loss = torch.nn.MSELoss()
     
     self.Key = KeyGenerator(BLOCKSIZE, BATCHLEN)
     self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
     self.logdir = f'training/anc_v{VERSION}/'
-    self.writer = SummaryWriter(log_dir=self.logdir) if not debug else None
+    self.writer = SummaryWriter(log_dir=path.join(self.logdir, str(datetime.now()))) if not debug else None
 
   def log(self, *ip):
     if self.debug:
@@ -90,7 +92,7 @@ class TrainingSession():
           eve_reconst_loss = self.l1_loss(Pe, P)
 
           # Quadratic loss
-          alice_loss = bob_reconst_loss - ((1.0 - eve_reconst_loss) ** 2)
+          alice_loss = bob_reconst_loss + ((1.0 - eve_reconst_loss) ** 2)
           alice_loss.backward()
           opt_alice.step()
         else:

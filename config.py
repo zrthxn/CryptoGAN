@@ -9,7 +9,7 @@ defaults = {
     # Default config options for Trainer
     "dropout": 0.1,
     "training": {
-        "batches": 12800, 
+        "batches": 7500, 
         "epochs": 10
     },
 

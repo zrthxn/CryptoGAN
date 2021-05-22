@@ -2,6 +2,8 @@ import torch
 import itertools
 import random
 from logging import info
+from datetime import datetime
+from os import path
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
@@ -49,7 +51,7 @@ class TrainingSession():
 
     self.debug = debug
     self.logdir = f'training/cryptonet_vL{VERSION}/'
-    self.writer = SummaryWriter(log_dir=self.logdir) if not debug else None
+    self.writer = SummaryWriter(log_dir=path.join(self.logdir, str(datetime.now()))) if not debug else None
 
   def log(self, *ip):
     if self.debug:

@@ -2,7 +2,7 @@ import logging
 from sys import argv
 from config import build_config, defaults
 
-from src import trainer, model
+from src import trainer, test
 
 
 def main():
@@ -26,6 +26,13 @@ def main():
 
   if actions.__contains__("train"):      
     trainer.start(model=defaults["model"])
+
+  if actions.__contains__("eval"):      
+    test.evaluate()
+
+  if actions.__contains__("encrypt"):      
+    c = test.encrypt("Hello World!1234", "KEYDKEYDKEYDKEYD")
+    p = test.decrypt(c, "KEYDKEYDKEYDKEYD")
   
 if __name__ == "__main__":
   main()

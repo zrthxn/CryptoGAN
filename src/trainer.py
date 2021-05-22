@@ -27,8 +27,12 @@ def start(model, debug = defaults["debug"]):
   trained = session.train(BATCHES=defaults["training"]["batches"], EPOCHS=defaults["training"]["epochs"])
   models, losses = trained
 
+  modelpaths = save(model, models)
+  return losses, modelpaths
+
+def save(name, models):
   for trained in models:
     if defaults["save_model"]:
-      save_model(trained.state_dict(), f'models/{model}/{trained.name}_{datetime.now()}.mdl')
-
-  return losses
+      path = f'models/{name}/{trained.name}_{datetime.now()}.mdl'
+      save_model(trained.state_dict(), path)
+      yield path
