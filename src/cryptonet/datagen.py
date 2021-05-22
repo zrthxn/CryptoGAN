@@ -1,24 +1,20 @@
 import random
+from src.util.gen import Generator
 
-class KeyGenerator():
-  def __init__(self, BLOCKSIZE):
-    self.blocksize = BLOCKSIZE
+class KeyGenerator(Generator):
+  silent = True
   
-  def single(self):
-    return [random.randint(0, 1) for _ in range(self.blocksize)]
-
-  def batchgen(self, BATCHES):
-    return [ self.single() for _ in BATCHES ]
-
-class PlainGenerator():
-  def __init__(self, BLOCKSIZE, BATCHLEN):
-    self.blocksize = BLOCKSIZE
-    self.batchlen = BATCHLEN
-  
-  def single(self):
-    return [random.randint(0, 1) for _ in range(self.blocksize)]
-
-  def batchgen(self, BATCHES):
+  def gen(self):
     return [
-      [[self.single(), self.single()] for _ in range(self.batchlen)] 
-    for _ in BATCHES]
+      [random.randint(0, 1) for _ in range(self.blocksize)]
+    for _ in range(self.batchlen)] 
+
+
+class PlainGenerator(Generator):
+  silent = True
+  
+  def gen(self):
+    return [
+      [ [random.randint(0, 1) for _ in range(self.blocksize)], [random.randint(0, 1) for _ in range(self.blocksize)] ] 
+    for _ in range(self.batchlen)] 
+

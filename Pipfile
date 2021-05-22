@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+bcrypt = "*"
+cryptography = "*"
+kaggle = "*"
+matplotlib = "*"
+numpy = "*"
+pandas = "*"
+pylint = "*"
+scikit-image = "*"
+scikit-learn = "*"
+scikit-optimize = "*"
+scipy = "*"
+seaborn = "*"
+six = "*"
+tokenizers = "*"
+torch = "*"
+tqdm = "*"
+xgboost = "*"
+tensorboard = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"

@@ -11,12 +11,12 @@ import torch.nn.functional as F
 
 # Define networks
 class KeyholderNetwork(nn.Module):
-  def __init__(self, name, blocksize):
+  def __init__(self, blocksize, name = None):
     super(KeyholderNetwork, self).__init__()
     
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize * 2)
-    self.name = name
+    self.name = name if name != None else 'KeyholderNetwork'
 
     self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 2)
     
@@ -31,7 +31,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.fc1(inputs)
     inputs = torch.sigmoid(inputs)
 
-    inputs = inputs.unsqueeze(0).unsqueeze(0)
+    inputs = inputs.unsqueeze(dim=1)
 
     inputs = self.conv1(inputs)
     inputs = torch.sigmoid(inputs)
@@ -45,15 +45,15 @@ class KeyholderNetwork(nn.Module):
     inputs = self.conv4(inputs)
     inputs = torch.tanh(inputs)
 
-    return inputs.view(self.blocksize)
+    return inputs.view((-1, self.blocksize))
 
 class AttackerNetwork(nn.Module):
-  def __init__(self, name, blocksize):
+  def __init__(self, blocksize, name = None):
     super(AttackerNetwork, self).__init__()
     
     self.blocksize = blocksize
     self.entry = nn.Identity(blocksize)
-    self.name = name
+    self.name = name if name != None else 'AttackerNetwork'
 
     self.fc1 = nn.Linear(in_features=blocksize, out_features=blocksize * 2)
     
@@ -68,7 +68,7 @@ class AttackerNetwork(nn.Module):
     inputs = self.fc1(inputs)
     inputs = torch.sigmoid(inputs)
 
-    inputs = inputs.unsqueeze(0).unsqueeze(0)
+    inputs = inputs.unsqueeze(dim=1)
     
     inputs = self.conv1(inputs)
     inputs = torch.sigmoid(inputs)
@@ -82,4 +82,4 @@ class AttackerNetwork(nn.Module):
     inputs = self.conv4(inputs)
     inputs = torch.tanh(inputs)
 
-    return inputs.view(self.blocksize)
+    return inputs.view((-1, self.blocksize))

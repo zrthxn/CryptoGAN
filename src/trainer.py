@@ -1,28 +1,31 @@
 from torch import save as save_model
 from datetime import datetime
 
-from anc import training as ancTrainer
-from cryptonet import training as cryptonetTrainer
-
-debug = False
-
-
-# ANC Training
-session = ancTrainer.TrainingSession(debug, BLOCKSIZE=16, BATCHLEN=2048)
-trained = session.train(BATCHES=15000, EPOCHS=10)
-
-models, losses = trained
-
-for model in models:
-  save_model(model.state_dict(), f'models/anc/{model.name}_{datetime.now()}.mdl')
+from config import defaults
+from src.anc import training as ancTrainer
+from src.cryptonet import training as cryptonetTrainer
 
 
-# # Cryptonet Training 
-# session = cryptonetTrainer.TrainingSession(debug, BLOCKSIZE=16, BATCHLEN=16)
-# trained = session.train(BATCHES=24, EPOCHS=1)
+def start(model, debug = defaults["debug"]):
+  if not model:
+    raise ValueError("Please provide a model name to train.")
 
-# models, losses = trained
+  if model not in defaults["avail_models"]:
+    raise NameError("This model is not available.")
 
-# for model in models:
-#   save_model(model.state_dict(), f'models/cryptonet/{model.name}_{datetime.now()}.mdl')
 
+  if model == "anc":
+    # ANC Training
+    session = ancTrainer.TrainingSession(debug=debug)
+  elif model == "cryptonet":
+    # Cryptonet Training 
+    session = cryptonetTrainer.TrainingSession(debug=debug)
+
+  trained = session.train(BATCHES=defaults["training"]["batches"], EPOCHS=defaults["training"]["epochs"])
+  models, losses = trained
+
+  for trained in models:
+    if defaults["save_model"]:
+      save_model(trained.state_dict(), f'models/{model}/{trained.name}_{datetime.now()}.mdl')
+
+  return losses

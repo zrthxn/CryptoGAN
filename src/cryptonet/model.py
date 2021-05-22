@@ -25,10 +25,11 @@ def debug(*ip):
 VERSION += 1
 
 class KeyholderNetwork(nn.Module):
-  def __init__(self, blocksize):
+  def __init__(self, blocksize, name = None):
     super(KeyholderNetwork, self).__init__()
     
     self.blocksize = blocksize
+    self.name = name if name != None else 'KeyholderNetwork'
 
     # Entry layer verifies the size of inputs before proceeding
     self.entry = nn.Identity(blocksize * 2)
@@ -66,7 +67,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.fc2(inputs)
     inputs = torch.relu(inputs)
 
-    inputs = inputs.unsqueeze(dim=0).unsqueeze(dim=0)
+    inputs = inputs.unsqueeze(dim=1)
     debug(inputs)
     
     inputs = self.conv1(inputs)
@@ -81,7 +82,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.conv4(inputs)
     inputs = torch.sigmoid(inputs)
     
-    inputs = inputs.view(self.blocksize)
+    inputs = inputs.view((-1, self.blocksize))
 
     inputs = self.fc3(inputs)
     inputs = torch.relu(inputs)
@@ -97,10 +98,11 @@ class KeyholderNetwork(nn.Module):
 
 
 class AttackerNetwork(nn.Module):
-  def __init__(self, blocksize):
+  def __init__(self, blocksize, name = None):
     super(AttackerNetwork, self).__init__()
     
     self.blocksize = blocksize
+    self.name = name if name != None else 'AttackerNetwork'
     self.entry = nn.Identity(blocksize * 3)
 
     self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 6)

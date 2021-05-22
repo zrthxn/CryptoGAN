@@ -1,25 +1,21 @@
 import random
-from tqdm import tqdm
+from src.util.gen import Generator
 
 VALUES = [-1, 1]
 
-class KeyGenerator():
-  def __init__(self, BLOCKSIZE):
-    self.blocksize = BLOCKSIZE
+class KeyGenerator(Generator):
+  silent = True
   
-  def batchgen(self, BATCHES):
-    print(f'Generating keys...')
+  def gen(self):
+    return [
+      [ VALUES[random.randint(0, 1)] for _ in range(self.blocksize) ] 
+    for _ in range(self.batchlen)]
+
+
+class PlainGenerator(Generator):
+  silent = True
+
+  def gen(self):
     return [
       [ VALUES[random.randint(0, 1)] for _ in range(self.blocksize)] 
-    for _ in tqdm(range(BATCHES))]
-
-class PlainGenerator():
-  def __init__(self, BLOCKSIZE, BATCHLEN):
-    self.blocksize = BLOCKSIZE
-    self.batchlen = BATCHLEN
-  
-  def batchgen(self, BATCHES):
-    print(f'Generating plaintexts...')
-    return [
-      [[ VALUES[random.randint(0, 1)] for _ in range(self.blocksize)] for _ in range(self.batchlen)] 
-    for _ in tqdm(range(BATCHES))]
+    for _ in range(self.batchlen)]

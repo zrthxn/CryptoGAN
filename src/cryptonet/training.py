@@ -1,50 +1,51 @@
 import itertools
 import random
 import torch
+from logging import info
 from tqdm import tqdm
-
 from torch.utils.tensorboard import SummaryWriter
 
-from cryptonet.datagen import KeyGenerator as Key
-from cryptonet.datagen import PlainGenerator as Plain
+from config import defaults
+from src.cryptonet.datagen import KeyGenerator
+from src.cryptonet.datagen import PlainGenerator
+from src.cryptonet.model import KeyholderNetwork, AttackerNetwork
+from src.cryptonet.model import weights_init_normal
 
-from cryptonet.model import KeyholderNetwork, AttackerNetwork
-from cryptonet.model import weights_init_normal
-
-from autoenc.datagen import ghetto_tqdm
 
 VERSION = '1.1'
 
 class TrainingSession():
-  def __init__(self, debug = False, BLOCKSIZE = 16, BATCHLEN = 64):
+  def __init__(self, debug = False, 
+      BLOCKSIZE = defaults["cryptonet"]["blocksize"], 
+      BATCHLEN = defaults["cryptonet"]["batchlen"]):
     self.blocksize = BLOCKSIZE
     
     # Initialize Networks
-    self.alice = KeyholderNetwork(BLOCKSIZE)
-    self.bob = KeyholderNetwork(BLOCKSIZE)
-    self.eve = AttackerNetwork(BLOCKSIZE)
+    self.alice = KeyholderNetwork(BLOCKSIZE, name='Alice')
+    self.bob = KeyholderNetwork(BLOCKSIZE, name='Bob')
+    self.eve = AttackerNetwork(BLOCKSIZE, name='Eve')
 
     # Initialize weights
-    # self.alice.apply(weights_init_normal)
-    # self.bob.apply(weights_init_normal)
-    # self.eve.apply(weights_init_normal)
+    self.alice.apply(weights_init_normal)
+    self.bob.apply(weights_init_normal)
+    self.eve.apply(weights_init_normal)
 
     # # CUDA
-    # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    # # torch.set_default_tensor_type('torch.cuda.Tensor' if torch.cuda.is_available() else 'torch.Tensor')
-    # print('Using device', device)
+    self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    # torch.set_default_tensor_type('torch.cuda.Tensor' if torch.cuda.is_available() else 'torch.Tensor')
+    # info('Using device', str(self.device))
 
-    # self.alice.to(device)
-    # self.bob.to(device)
-    # self.eve.to(device)
+    self.alice.to(self.device)
+    self.bob.to(self.device)
+    self.eve.to(self.device)
 
     # self.lossfn = torch.nn.L1Loss()
     self.lossfn = torch.nn.MSELoss()
     # self.lossfn = torch.nn.CrossEntropyLoss()
     # self.lossfn = torch.nn.BCELoss()
 
-    self.KeyGenerator = Key(BLOCKSIZE)
-    self.PlainGenerator = Plain(BLOCKSIZE, BATCHLEN)
+    self.Key = KeyGenerator(BLOCKSIZE, BATCHLEN)
+    self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
     self.writer = SummaryWriter(f'training/cryptonet_vL{VERSION}') if not debug else None
@@ -54,23 +55,16 @@ class TrainingSession():
       print(*ip)
 
   def train(self, BATCHES = 256, EPOCHS = 16):
+    print(f'Cryptonet Model v{VERSION}')
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
-    opt_alice_bob = torch.optim.Adam(ab_params, lr=0.0008, weight_decay=1e-5)
-    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=0.001)
-
-    # if not self.debug:
-    #   graph_ip = torch.cat([torch.Tensor(self.PlainGenerator.single()), torch.Tensor(self.KeyGenerator.single())], dim=0)
-    #   self.writer.add_graph(self.alice, graph_ip)
-    #   self.writer.close()
+    opt_alice_bob = torch.optim.Adam(ab_params, lr=defaults["cryptonet"]["alice_lr"], weight_decay=1e-5)
+    opt_eve = torch.optim.Adam(self.eve.parameters(), lr=defaults["cryptonet"]["eve_lr"])
 
     alice_running_loss = []
     bob_running_loss = []
     eve_running_loss = []
 
     bob_bits_acc = []
-
-    print(f'Cryptonet Model v{VERSION}')
-    print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
     self.alice.train()
     self.bob.train()
@@ -83,18 +77,16 @@ class TrainingSession():
     DECISION_MARGIN = 0.1
     STOP = False
 
-    KEYS = self.KeyGenerator.batchgen(BATCHES)
-    PLAINS = self.PlainGenerator.batchgen(BATCHES)
-    print(f'Generated {BATCHES} batches of data')
+    print("Starting training loop")
+    print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
     for E in range(EPOCHS):  
       print(f'Epoch {E + 1}/{EPOCHS}')
 
       for B in tqdm(range(BATCHES)):
-        PLAIN = torch.Tensor(PLAINS[B])
-        KEY = torch.Tensor(KEYS[B])
+        PLAIN = self.Plain.single(B)
+        KEY = self.Key.single(B)
         K = torch.Tensor(KEY)
-        # print(ghetto_tqdm(B, BATCHES))
 
         for X in PLAIN:
           P0 = torch.Tensor(X[0])
