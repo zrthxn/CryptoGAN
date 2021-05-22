@@ -1,25 +1,25 @@
 from typing import List, Tuple
 import torch
 import os
+from numpy import array
 
 from config import defaults
 from src.util.binary import str_to_binlist
 from src.anc.model import KeyholderNetwork as ANCKeyholder, AttackerNetwork as ANCAttacker
 from src.anc.datagen import KeyGenerator as ANCKeyGen, PlainGenerator as ANCPlainGen
-from src.cryptonet.datagen import KeyGenerator as CNKeyGen, PlainGenerator as CNPlainGen
 from src.cryptonet.model import KeyholderNetwork as CNKeyholder, AttackerNetwork as CNAttacker
+from src.cryptonet.datagen import KeyGenerator as CNKeyGen, PlainGenerator as CNPlainGen
 
 
 def evaluate(modelpaths: str = None):
   key = "KEYDKEYDKEYDKEYD"
   plain = "Hello World!1234"
+
   plaintext = [torch.Tensor(token).unsqueeze(dim=0) for token in str_to_binlist(plain)]
+  p = decrypt(encrypt(plain, key), key)
 
-  c = encrypt(plain, key)
-  p = decrypt(c, key)
-
-  for i in range(int((len(c)+len(p))/2)):
-    print(torch.nn.L1Loss()(c[i], p[i]))
+  avg = array([torch.nn.MSELoss()(plaintext[i], p[i]).item() for i in range(len(p))]).sum()/len(p)
+  print(avg)
 
 
 def encrypt(plain: str, key: str, modelpaths: str = None):

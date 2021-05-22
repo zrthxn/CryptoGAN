@@ -32,6 +32,7 @@ def main():
 
   if actions.__contains__("encrypt"):      
     c = test.encrypt("Hello World!1234", "KEYDKEYDKEYDKEYD")
+  if actions.__contains__("decrypt"):      
     p = test.decrypt(c, "KEYDKEYDKEYDKEYD")
   
 if __name__ == "__main__":
