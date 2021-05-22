@@ -10,12 +10,11 @@ class Generator():
     self.batchlen = batchlen
 
   def gen(self):
-    """
-    Generate a single instance
+    """Generate a single instance
     """
     raise NotImplementedError
 
-  def single(self, key: int = None):
+  def next(self, key: int = None):
     """Generate or fetch one batch from generated data.
 
     Args:
@@ -25,17 +24,17 @@ class Generator():
       List: Batch. New if `key` doesn't exist. Not saved if `key` is `None`
     """
     if key is None:
-      return self.gen()
+      return [ self.gen() for _ in range(self.batchlen)]
 
     if key not in self._list.keys():
-      gen = self.gen()
+      gen = [ self.gen() for _ in range(self.batchlen)]
       self._list.update({ str(key): gen }) 
 
-    return self._list(key)
+    return self._list[str(key)]
 
   def batchgen(self, batches: int):
     ite = tqdm(range(batches)) if not self.silent else range(batches)
-    return [ self.single(i) for i in ite ]
+    return [ self.next(i) for i in ite ]
 
   def spawn(self):
     # multiprocessing.

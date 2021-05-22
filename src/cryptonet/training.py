@@ -1,6 +1,6 @@
+import torch
 import itertools
 import random
-import torch
 from logging import info
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -48,7 +48,8 @@ class TrainingSession():
     self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
-    self.writer = SummaryWriter(f'training/cryptonet_vL{VERSION}') if not debug else None
+    self.logdir = f'training/cryptonet_vL{VERSION}/'
+    self.writer = SummaryWriter(log_dir=self.logdir) if not debug else None
 
   def log(self, *ip):
     if self.debug:
@@ -84,8 +85,8 @@ class TrainingSession():
       print(f'Epoch {E + 1}/{EPOCHS}')
 
       for B in tqdm(range(BATCHES)):
-        PLAIN = self.Plain.single(B)
-        KEY = self.Key.single(B)
+        PLAIN = self.Plain.next(B)
+        KEY = self.Key.next(B)
         K = torch.Tensor(KEY)
 
         for X in PLAIN:
@@ -104,7 +105,7 @@ class TrainingSession():
 
           # Loss and BackProp
           bob_dec_loss = self.lossfn(Pb, P)
-          Re = self.eve(torch.cat([P0, P1, C.detach()], dim=0))
+          Re = self.eve(torch.cat([P0, P1, C], dim=0))
           eve_adv_loss = self.lossfn(Re, torch.Tensor([1 - R, R]))
           bob_dec_loss = self.lossfn(Pb, P) + torch.square(1 - eve_adv_loss)
           
@@ -135,10 +136,9 @@ class TrainingSession():
             break
 
         if not self.debug:
-          self.writer.add_scalar('Training Loss', bob_dec_loss.item(), (E * BATCHES) + B)
-          self.writer.add_scalar('Bit Accuracy', torch.Tensor([bob_acc]), (E * BATCHES) + B)
-          self.writer.add_scalar('Adversary Loss', eve_adv_loss.item(), (E * BATCHES)  + B)
-          self.writer.close()
+          self.writer.add_scalar('Loss/Adversary', eve_adv_loss.item(), global_step=(E * BATCHES + B))
+          self.writer.add_scalar('Loss/Training', bob_dec_loss.item(), global_step=(E * BATCHES + B))
+          self.writer.add_scalar('Accuracy/Bits', torch.Tensor([bob_acc]), global_step=(E * BATCHES + B))
         
         if STOP:
           break
@@ -147,4 +147,5 @@ class TrainingSession():
         break
 
     self.log('Finished Training')
+    self.writer.close()
     return (self.alice, self.bob, self.eve), (alice_running_loss, bob_running_loss, eve_running_loss)

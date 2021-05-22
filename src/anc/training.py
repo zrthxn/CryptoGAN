@@ -1,5 +1,5 @@
-import itertools
 import torch
+import itertools
 from logging import info
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
@@ -38,7 +38,8 @@ class TrainingSession():
     self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
-    self.writer = SummaryWriter(f'training/anc_v{VERSION}') if not debug else None
+    self.logdir = f'training/anc_v{VERSION}/'
+    self.writer = SummaryWriter(log_dir=self.logdir) if not debug else None
 
   def log(self, *ip):
     if self.debug:
@@ -70,30 +71,36 @@ class TrainingSession():
       train_turn = 0
 
       for B in tqdm(range(BATCHES)):
-        PLAIN = self.Plain.single()        
-        KEY = self.Key.single()
-        
+        PLAIN = self.Plain.next(B)
+        KEY = self.Key.next(B)
+
         K = torch.Tensor(KEY)
         P = torch.Tensor(PLAIN)
 
-        cipher = self.alice(torch.cat([P, K], dim=1))
-        Pb = self.bob(torch.cat([cipher, K], dim=1))
-        Pe = self.eve(cipher)
-
-        bob_reconst_loss = self.l1_loss(Pb, P)
-        eve_reconst_loss = self.l1_loss(Pe, P)
-
-        # Quadratic loss
-        alice_loss = bob_reconst_loss - ((1 - eve_reconst_loss/(self.blocksize/2)) ** 2)
+        opt_alice.zero_grad()
+        opt_eve.zero_grad()
 
         if train_turn == 0:
           # Train Alice-Bob for 1 turn
-          bob_reconst_loss.backward(retain_graph=True)
-          alice_loss.backward(retain_graph=True)
+          C = self.alice(torch.cat([P, K], dim=1))
+          Pb = self.bob(torch.cat([C, K], dim=1))
+          Pe = self.eve(C)
+
+          bob_reconst_loss = self.l1_loss(Pb, P)
+          eve_reconst_loss = self.l1_loss(Pe, P)
+
+          # Quadratic loss
+          alice_loss = bob_reconst_loss - ((1.0 - eve_reconst_loss) ** 2)
+          alice_loss.backward()
           opt_alice.step()
         else:
           # Train Eve for 2 turns
-          eve_reconst_loss.backward(retain_graph=True)
+          C = self.alice(torch.cat([P, K], dim=1)).detach()
+          Pe = self.eve(C)
+
+          # Advarsary loss
+          eve_reconst_loss = self.l1_loss(Pe, P)
+          eve_reconst_loss.backward()
           opt_eve.step()
 
         train_turn += 1
@@ -105,9 +112,10 @@ class TrainingSession():
         eve_running_loss.append(eve_reconst_loss.item())
 
         if not self.debug:
-          self.writer.add_scalar('Training Loss', bob_reconst_loss.item(), (E * BATCHES) + B)
-          self.writer.add_scalar('Adversary Loss', eve_reconst_loss.item(), (E * BATCHES)  + B)
-          self.writer.close()
+          self.writer.add_scalar('Loss/Training', alice_loss.item(), global_step=(E * BATCHES + B))
+          self.writer.add_scalar('Loss/Reconstruction', bob_reconst_loss.item(), global_step=(E * BATCHES + B))
+          self.writer.add_scalar('Loss/Adversary', eve_reconst_loss.item(), global_step=(E * BATCHES + B))
 
     self.log('Finished Training')
+    self.writer.close()
     return (self.alice, self.bob, self.eve), (alice_running_loss, bob_running_loss, eve_running_loss)

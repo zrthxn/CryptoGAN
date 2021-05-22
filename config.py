@@ -4,25 +4,26 @@ defaults = {
     "avail_models": ["anc", "cryptonet"],
     "model": "anc",
     "debug": False,
+    "tensorboard": False,
 
     # Default config options for Trainer
     "dropout": 0.1,
     "training": {
-        "batches": 128000, 
+        "batches": 12800, 
         "epochs": 10
     },
 
     "anc": {
         "blocksize": 16,
         "batchlen": 64,
-        "alice_lr": 0.0008,
+        "alice_lr": 0.001,
         "eve_lr": 0.001,
     },
 
     "cryptonet": {
         "blocksize": 16,
         "batchlen": 64,
-        "alice_lr": 0.0008,
+        "alice_lr": 0.001,
         "eve_lr": 0.001,
     },
 

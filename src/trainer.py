@@ -1,3 +1,4 @@
+from os import system
 from torch import save as save_model
 from datetime import datetime
 
@@ -21,6 +22,8 @@ def start(model, debug = defaults["debug"]):
     # Cryptonet Training 
     session = cryptonetTrainer.TrainingSession(debug=debug)
 
+  # if defaults["tensorboard"]:
+  #   system(f"tensorboard --logdir {session.logdir} &")
   trained = session.train(BATCHES=defaults["training"]["batches"], EPOCHS=defaults["training"]["epochs"])
   models, losses = trained
 

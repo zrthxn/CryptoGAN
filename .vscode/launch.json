@@ -5,10 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Script",
+      "name": "Train with Defaults",
       "type": "python",
       "request": "launch",
-      "program": "${file}",
+      "program": "${workspaceFolder}/init.py",
+      "args": [
+        "train"
+      ],
       "console": "integratedTerminal"
     }
   ]

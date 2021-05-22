@@ -21,11 +21,11 @@ def main():
     print("Training utility")
     return 0
 
+  if actions.__contains__("logs"):      
+    defaults["tensorboard"] = True
+
   if actions.__contains__("train"):      
     trainer.start(model=defaults["model"])
-    
-  # if actions.__contains__("train"):      
-  #   trainer.start()
   
 if __name__ == "__main__":
   main()
