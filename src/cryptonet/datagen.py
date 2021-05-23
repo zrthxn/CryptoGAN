@@ -12,7 +12,4 @@ class PlainGenerator(Generator):
   silent = True
   
   def gen(self):
-    return [ 
-      [float(random.randint(0, 1)) for _ in range(self.blocksize)], 
-      [float(random.randint(0, 1)) for _ in range(self.blocksize)] 
-    ] 
+    return [float(random.randint(0, 1)) for _ in range(self.blocksize)]

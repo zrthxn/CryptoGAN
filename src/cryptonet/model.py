@@ -58,7 +58,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.entry(inputs)
 
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
     debug(inputs)
 
     inputs = self.fc1(inputs)
@@ -90,8 +90,8 @@ class KeyholderNetwork(nn.Module):
     debug(inputs)
 
     # f* = [1 - cos(a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
-    inputs = torch.div(1 - inputs, 2)
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = torch.div(1 - inputs, 2)
     inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
@@ -115,7 +115,7 @@ class AttackerNetwork(nn.Module):
     inputs = self.entry(inputs)
     
     # f = arccos(1-2b)
-    inputs = torch.acos(1 - torch.mul(inputs, 2))
+    # inputs = torch.acos(1 - torch.mul(inputs, 2))
 
     inputs = self.fc1(inputs)
     inputs = torch.relu(inputs)
@@ -133,7 +133,7 @@ class AttackerNetwork(nn.Module):
     inputs = torch.softmax(inputs, dim=0)
 
     # f* = [1 - cos(a)]/2
-    inputs = torch.div(1 - torch.cos(inputs), 2)
+    # inputs = torch.div(1 - torch.cos(inputs), 2)
     inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs

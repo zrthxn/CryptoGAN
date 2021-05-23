@@ -21,6 +21,7 @@ class TrainingSession():
       BLOCKSIZE = defaults["cryptonet"]["blocksize"], 
       BATCHLEN = defaults["cryptonet"]["batchlen"]):
     self.blocksize = BLOCKSIZE
+    self.batchlen = BATCHLEN
     
     # Initialize Networks
     self.alice = KeyholderNetwork(BLOCKSIZE, name='Alice')
@@ -41,13 +42,14 @@ class TrainingSession():
     self.bob.to(self.device)
     self.eve.to(self.device)
 
+    self.mseloss = torch.nn.MSELoss()
+    self.bceloss = torch.nn.BCELoss()
     # self.lossfn = torch.nn.L1Loss()
-    self.lossfn = torch.nn.MSELoss()
     # self.lossfn = torch.nn.CrossEntropyLoss()
-    # self.lossfn = torch.nn.BCELoss()
 
     self.Key = KeyGenerator(BLOCKSIZE, BATCHLEN)
-    self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
+    self.PlainA = PlainGenerator(BLOCKSIZE, BATCHLEN)
+    self.PlainB = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
     self.logdir = f'training/cryptonet_vL{VERSION}/'
@@ -78,75 +80,74 @@ class TrainingSession():
 
     # Hyperparams
     DECISION_MARGIN = 0.1
-    STOP = False
 
     print("Starting training loop")
     print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
 
     for E in range(EPOCHS):  
       print(f'Epoch {E + 1}/{EPOCHS}')
+      train_turn = 0
 
       for B in tqdm(range(BATCHES)):
-        PLAIN = self.Plain.next(B)
+        PLA = self.PlainA.next(B)
+        PLB = self.PlainB.next(B)
         KEY = self.Key.next(B)
+
+        opt_alice_bob.zero_grad()
+        opt_eve.zero_grad()
+
+        R = []
+        P = []
+        for i in range(self.batchlen):
+          r = random.randint(0, 1)
+          P.append(PLA[i] if r == 0 else PLB[i])
+          R.append([1 - r, r])
+
+        P = torch.Tensor(P)
+        R = torch.Tensor(R)
+
+        P0 = torch.Tensor(PLA)
+        P1 = torch.Tensor(PLB)
         K = torch.Tensor(KEY)
+              
+        if train_turn == 0:
+          # Train Alice-Bob for 1 turn
+          C = self.alice(torch.cat([P, K], dim=1))
+          Pb = self.bob(torch.cat([C, K], dim=1))
+          Re = self.eve(torch.cat([P0, P1, C], dim=1))
 
-        for X in PLAIN:
-          P0 = torch.Tensor(X[0])
-          P1 = torch.Tensor(X[1])
-
-          R = random.randint(0, 1)
-          P = torch.Tensor(X[R])
-          self.log('PLAIN', P)
-                
-          C = self.alice(torch.cat([P, K], dim=0))
-          self.log('CIPHR', C)
-
-          Pb = self.bob(torch.cat([C, K], dim=0))
-          self.log('DCRPT', Pb)
-
-          # Loss and BackProp
-          bob_dec_loss = self.lossfn(Pb, P)
-          Re = self.eve(torch.cat([P0, P1, C], dim=0))
-          eve_adv_loss = self.lossfn(Re, torch.Tensor([1 - R, R]))
-          bob_dec_loss = self.lossfn(Pb, P) + torch.square(1 - eve_adv_loss)
+          bob_dec_loss = self.mseloss(Pb, P)
+          eve_adv_loss = self.bceloss(Re, R)
+          alice_loss = bob_dec_loss + torch.square(1 - eve_adv_loss)
           
-          opt_alice_bob.zero_grad()
-          opt_eve.zero_grad()
-
-          bob_dec_loss.backward(retain_graph=True)
+          alice_loss.backward()
           opt_alice_bob.step()
+        else:
+          # Train Eve for 2 turns
+          C = self.alice(torch.cat([P, K], dim=1)).detach()
+          Re = self.eve(torch.cat([P0, P1, C], dim=1))
+          
+          eve_adv_loss = self.bceloss(Re, R)          
+          eve_adv_loss.backward()
+          opt_eve.step()
 
-          if B > BATCHES/2:
-            eve_adv_loss.backward(retain_graph=True)
-            opt_eve.step()
+        train_turn += 1
+        if train_turn >= 2:
+          train_turn = 0
 
-          # torch.nn.utils.clip_grad_norm_(alice.parameters(), 4.0)
-          # torch.nn.utils.clip_grad_norm_(bob.parameters(), 4.0)
-          # torch.nn.utils.clip_grad_norm_(eve.parameters(), 4.0)
+        # bob_acc = 0
+        # # for i in range(self.blocksize):
+        # if torch.abs(torch.round(Pb - DECISION_MARGIN)) == P:
+        #   bob_acc += (1/self.blocksize)
 
-          bob_acc = 0
-          for b in range(self.blocksize):
-            if torch.abs(torch.round(Pb[b] - DECISION_MARGIN)) == P[b]:
-              bob_acc += (1/self.blocksize)
-
-          bob_bits_acc.append(bob_acc)
-          bob_running_loss.append(bob_dec_loss.item())
-          eve_running_loss.append(eve_adv_loss.item())
-
-          if STOP:
-            break
+        # bob_bits_acc.append(bob_acc)
+        bob_running_loss.append(bob_dec_loss.item())
+        eve_running_loss.append(eve_adv_loss.item())
 
         if not self.debug:
+          self.writer.add_scalar('Loss/Training', alice_loss.item(), global_step=(E * BATCHES + B))
           self.writer.add_scalar('Loss/Adversary', eve_adv_loss.item(), global_step=(E * BATCHES + B))
-          self.writer.add_scalar('Loss/Training', bob_dec_loss.item(), global_step=(E * BATCHES + B))
-          self.writer.add_scalar('Accuracy/Bits', torch.Tensor([bob_acc]), global_step=(E * BATCHES + B))
-        
-        if STOP:
-          break
-      
-      if STOP:
-        break
+          # self.writer.add_scalar('Accuracy/Bits', torch.Tensor([bob_acc]), global_step=(E * BATCHES + B))
 
     self.log('Finished Training')
     self.writer.close()
