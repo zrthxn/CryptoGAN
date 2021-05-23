@@ -1,10 +1,12 @@
-from typing import List, Tuple
+import random
+import string
 import torch
 import os
 from numpy import array
+from typing import List, Tuple
 
 from config import defaults
-from src.util.binary import str_to_binlist
+from src.util.binary import binlist_to_str, str_to_binlist
 from src.anc.model import KeyholderNetwork as ANCKeyholder, AttackerNetwork as ANCAttacker
 from src.anc.datagen import KeyGenerator as ANCKeyGen, PlainGenerator as ANCPlainGen
 from src.cryptonet.model import KeyholderNetwork as CNKeyholder, AttackerNetwork as CNAttacker
@@ -12,18 +14,21 @@ from src.cryptonet.datagen import KeyGenerator as CNKeyGen, PlainGenerator as CN
 
 
 def evaluate(modelpaths: str = None):
-  key = "KEYDKEYDKEYDKEYD"
-  plain = "Hello World!1234"
+  key = ''.join(random.choices(string.ascii_uppercase + string.digits, k = defaults[defaults["model"]]["blocksize"]))
+  plain = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 256))
 
   plaintext = [torch.Tensor(token).unsqueeze(dim=0) for token in str_to_binlist(plain)]
-  p = decrypt(encrypt(plain, key), key)
+  p = decrypt(encrypt(plain, key, modelpaths), key, modelpaths)
 
-  avg = array([torch.nn.MSELoss()(plaintext[i], p[i]).item() for i in range(len(p))]).sum()/len(p)
-  print(avg)
+  avg = array([torch.nn.MSELoss()(plaintext[i], p[i]).item() for i in range(len(p))]).sum() / len(p)
+  print('Average Reconstruction loss:', "{:.8f}".format(avg))
 
 
 def encrypt(plain: str, key: str, modelpaths: str = None):
   alice, _, _ = load_models(modelpaths)
+
+  if len(plain) % 2 != 0:
+    plain += "+"
 
   plain = str_to_binlist(plain)
   key = str_to_binlist(key)
@@ -50,6 +55,11 @@ def decrypt(cipher: List[torch.Tensor], key: str, modelpaths: str = None):
     plaintext.append(plain)
 
   return plaintext
+
+
+def decode(plaintext):
+  plaintext = [ token.reshape(token.shape[1]).tolist() for token in plaintext ]
+  return binlist_to_str(plaintext).replace("+", " ")
 
 
 def load_models(modelpaths: str = None, set_eval: bool = True) -> Tuple[torch.nn.Module]:

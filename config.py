@@ -13,13 +13,15 @@ defaults = {
         "epochs": 10
     },
 
+    # Default config options for ANC
     "anc": {
         "blocksize": 16,
         "batchlen": 64,
         "alice_lr": 0.001,
         "eve_lr": 0.001,
     },
-
+    
+    # Default config options for Cryptonet
     "cryptonet": {
         "blocksize": 16,
         "batchlen": 64,

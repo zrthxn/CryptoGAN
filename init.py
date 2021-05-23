@@ -1,4 +1,6 @@
 import logging
+import random
+import string
 from sys import argv
 from config import build_config, defaults
 
@@ -21,19 +23,20 @@ def main():
     print("Training utility")
     return 0
 
-  if actions.__contains__("logs"):      
-    defaults["tensorboard"] = True
-
   if actions.__contains__("train"):      
     trainer.start(model=defaults["model"])
 
   if actions.__contains__("eval"):      
     test.evaluate()
 
-  if actions.__contains__("encrypt"):      
-    c = test.encrypt("Hello World!1234", "KEYDKEYDKEYDKEYD")
+  if actions.__contains__("encrypt"):
+    K = ''.join(random.choices(string.ascii_uppercase + string.digits, 
+      k = defaults[defaults["model"]]["blocksize"]
+    ))
+    C = test.encrypt(input("Text: "), K)
   if actions.__contains__("decrypt"):      
-    p = test.decrypt(c, "KEYDKEYDKEYDKEYD")
+    P = test.decrypt(C, K)
+    print("Decrypted:", test.decode(P))
   
 if __name__ == "__main__":
   main()
