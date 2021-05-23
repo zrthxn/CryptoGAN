@@ -53,7 +53,7 @@ class TrainingSession():
 
     self.debug = debug
     self.logdir = f'training/cryptonet_vL{VERSION}/'
-    self.writer = SummaryWriter(log_dir=path.join(self.logdir, str(datetime.now()))) if not debug else None
+    self.writer = SummaryWriter(log_dir=path.join(self.logdir, defaults["training"]["run"])) if not debug else None
 
   def log(self, *ip):
     if self.debug:
@@ -118,7 +118,7 @@ class TrainingSession():
 
           bob_dec_loss = self.mseloss(Pb, P)
           eve_adv_loss = self.bceloss(Re, R)
-          alice_loss = bob_dec_loss + torch.square(1 - eve_adv_loss)
+          alice_loss = bob_dec_loss + ((1.0 - eve_adv_loss) ** 2)
           
           alice_loss.backward()
           opt_alice_bob.step()

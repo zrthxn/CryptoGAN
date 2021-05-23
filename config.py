@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 defaults = {
@@ -9,7 +10,8 @@ defaults = {
     # Default config options for Trainer
     "dropout": 0.1,
     "training": {
-        "batches": 7500, 
+        "run": str(datetime.now()),
+        "batches": 12800, 
         "epochs": 10
     },
 

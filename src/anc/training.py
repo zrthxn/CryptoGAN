@@ -41,7 +41,7 @@ class TrainingSession():
 
     self.debug = debug
     self.logdir = f'training/anc_v{VERSION}/'
-    self.writer = SummaryWriter(log_dir=path.join(self.logdir, str(datetime.now()))) if not debug else None
+    self.writer = SummaryWriter(log_dir=path.join(self.logdir, defaults["training"]["run"])) if not debug else None
 
   def log(self, *ip):
     if self.debug:

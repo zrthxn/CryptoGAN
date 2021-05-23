@@ -92,7 +92,7 @@ class KeyholderNetwork(nn.Module):
     # f* = [1 - cos(a)]/2
     # inputs = torch.div(1 - torch.cos(inputs), 2)
     # inputs = torch.div(1 - inputs, 2)
-    inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
+    # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
 
@@ -134,7 +134,7 @@ class AttackerNetwork(nn.Module):
 
     # f* = [1 - cos(a)]/2
     # inputs = torch.div(1 - torch.cos(inputs), 2)
-    inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
+    # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
 
