@@ -42,10 +42,9 @@ class TrainingSession():
     self.bob.to(self.device)
     self.eve.to(self.device)
 
+    self.l1loss = torch.nn.L1Loss()
     self.mseloss = torch.nn.MSELoss()
     self.bceloss = torch.nn.BCELoss()
-    # self.lossfn = torch.nn.L1Loss()
-    # self.lossfn = torch.nn.CrossEntropyLoss()
 
     self.Key = KeyGenerator(BLOCKSIZE, BATCHLEN)
     self.PlainA = PlainGenerator(BLOCKSIZE, BATCHLEN)
@@ -80,6 +79,7 @@ class TrainingSession():
 
     # Hyperparams
     DECISION_MARGIN = 0.1
+    GAMMA = 5
 
     print("Starting training loop")
     print(f'Training with {BATCHES} batches over {EPOCHS} epochs')
@@ -116,9 +116,9 @@ class TrainingSession():
           Pb = self.bob(torch.cat([C, K], dim=1))
           Re = self.eve(torch.cat([P0, P1, C], dim=1))
 
-          bob_dec_loss = self.mseloss(Pb, P)
+          bob_dec_loss = self.l1loss(Pb, P)
           eve_adv_loss = self.bceloss(Re, R)
-          alice_loss = bob_dec_loss + ((1.0 - eve_adv_loss) ** 2)
+          alice_loss = bob_dec_loss - GAMMA * min(eve_adv_loss, 0.5)
           
           alice_loss.backward()
           opt_alice_bob.step()
@@ -141,13 +141,14 @@ class TrainingSession():
         #   bob_acc += (1/self.blocksize)
 
         # bob_bits_acc.append(bob_acc)
+        alice_running_loss.append(alice_loss.item())
         bob_running_loss.append(bob_dec_loss.item())
         eve_running_loss.append(eve_adv_loss.item())
 
         if not self.debug:
           self.writer.add_scalar('Loss/Training', alice_loss.item(), global_step=(E * BATCHES + B))
           self.writer.add_scalar('Loss/Adversary', eve_adv_loss.item(), global_step=(E * BATCHES + B))
-          # self.writer.add_scalar('Accuracy/Bits', torch.Tensor([bob_acc]), global_step=(E * BATCHES + B))
+          self.writer.add_scalar('Loss/Reconstruction', bob_dec_loss.item(), global_step=(E * BATCHES + B))
 
     self.log('Finished Training')
     self.writer.close()

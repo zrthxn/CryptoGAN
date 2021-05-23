@@ -1,6 +1,4 @@
 import logging
-import random
-import string
 from sys import argv
 from config import build_config, defaults
 

@@ -17,10 +17,6 @@ VERSION = 64
 
 DEBUGGING = False
 
-def debug(*ip):
-  if DEBUGGING:
-    print(*ip)
-
 # Define networks
 VERSION += 1
 
@@ -36,14 +32,14 @@ class KeyholderNetwork(nn.Module):
 
     self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 4)
     self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
-    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
+    self.fc3 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
     
     # self.norm = nn.BatchNorm1d(num_features=blocksize)
     
-    self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
-    self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
-    self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
-    self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
+    # self.conv1 = nn.Conv1d(in_channels=1, out_channels=2, kernel_size=4, stride=1, padding=2)
+    # self.conv2 = nn.Conv1d(in_channels=2, out_channels=2, kernel_size=2, stride=2)
+    # self.conv3 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=1, stride=1)
+    # self.conv4 = nn.Conv1d(in_channels=4, out_channels=1, kernel_size=1, stride=1)
  
   def squash(self, input_):
     squared_norm = (input_ ** 2).sum(-1, keepdim=True)
@@ -58,8 +54,7 @@ class KeyholderNetwork(nn.Module):
     inputs = self.entry(inputs)
 
     # f = arccos(1-2b)
-    # inputs = torch.acos(1 - torch.mul(inputs, 2))
-    debug(inputs)
+    inputs = torch.acos(self.squash(1 - torch.mul(inputs, 2)))
 
     inputs = self.fc1(inputs)
     inputs = torch.relu(inputs)
@@ -67,31 +62,27 @@ class KeyholderNetwork(nn.Module):
     inputs = self.fc2(inputs)
     inputs = torch.relu(inputs)
 
-    inputs = inputs.unsqueeze(dim=1)
-    debug(inputs)
+    # inputs = inputs.unsqueeze(dim=1)
     
-    inputs = self.conv1(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = self.conv1(inputs)
+    # inputs = torch.sigmoid(inputs)
 
-    inputs = self.conv2(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = self.conv2(inputs)
+    # inputs = torch.sigmoid(inputs)
     
-    inputs = self.conv3(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = self.conv3(inputs)
+    # inputs = torch.sigmoid(inputs)
 
-    inputs = self.conv4(inputs)
-    inputs = torch.sigmoid(inputs)
+    # inputs = self.conv4(inputs)
+    # inputs = torch.sigmoid(inputs)
     
-    inputs = inputs.view((-1, self.blocksize))
+    # inputs = inputs.view((-1, self.blocksize))
 
     inputs = self.fc3(inputs)
     inputs = torch.relu(inputs)
 
-    debug(inputs)
-
     # f* = [1 - cos(a)]/2
-    # inputs = torch.div(1 - torch.cos(inputs), 2)
-    # inputs = torch.div(1 - inputs, 2)
+    inputs = torch.div(1 - torch.cos(inputs), 2)
     # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
 
     return inputs
@@ -114,9 +105,6 @@ class AttackerNetwork(nn.Module):
   def forward(self, inputs):
     inputs = self.entry(inputs)
     
-    # f = arccos(1-2b)
-    # inputs = torch.acos(1 - torch.mul(inputs, 2))
-
     inputs = self.fc1(inputs)
     inputs = torch.relu(inputs)
 
@@ -130,11 +118,7 @@ class AttackerNetwork(nn.Module):
     inputs = torch.relu(inputs)
 
     inputs = self.fc5(inputs)
-    inputs = torch.softmax(inputs, dim=0)
-
-    # f* = [1 - cos(a)]/2
-    # inputs = torch.div(1 - torch.cos(inputs), 2)
-    # inputs = F.hardsigmoid(torch.mul(inputs, 10) - 5)
+    inputs = torch.softmax(inputs, dim=1)
 
     return inputs
 
