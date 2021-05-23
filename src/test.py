@@ -8,14 +8,14 @@ from typing import List, Tuple
 from config import defaults
 from src.util.binary import binlist_to_str, str_to_binlist
 from src.anc.model import KeyholderNetwork as ANCKeyholder, AttackerNetwork as ANCAttacker
-from src.anc.datagen import KeyGenerator as ANCKeyGen, PlainGenerator as ANCPlainGen
 from src.cryptonet.model import KeyholderNetwork as CNKeyholder, AttackerNetwork as CNAttacker
-from src.cryptonet.datagen import KeyGenerator as CNKeyGen, PlainGenerator as CNPlainGen
 
+
+keygen = lambda: ''.join(random.choices(string.ascii_letters + string.digits, k = defaults[defaults["model"]]["blocksize"]))
 
 def evaluate(modelpaths: str = None):
-  key = ''.join(random.choices(string.ascii_uppercase + string.digits, k = defaults[defaults["model"]]["blocksize"]))
-  plain = ''.join(random.choices(string.ascii_uppercase + string.digits, k = 256))
+  plain = ''.join(random.choices(string.ascii_letters + string.digits, k = 256))
+  key = keygen()
 
   plaintext = [torch.Tensor(token).unsqueeze(dim=0) for token in str_to_binlist(plain)]
   p = decrypt(encrypt(plain, key, modelpaths), key, modelpaths)
@@ -24,20 +24,23 @@ def evaluate(modelpaths: str = None):
   print('Average Reconstruction loss:', "{:.8f}".format(avg))
 
 
+def evaluate_manual(p: str, d: list):
+  txt = [torch.Tensor(token).unsqueeze(dim=0) for token in str_to_binlist(p)]
+  avg = array([torch.nn.MSELoss()(d[i], txt[i]).item() for i in range(len(txt))]).sum() / len(txt)
+  print('Reconstruction loss:', "{:.8f}".format(avg))
+
+
 def encrypt(plain: str, key: str, modelpaths: str = None):
   alice, _, _ = load_models(modelpaths)
 
-  if len(plain) % 2 != 0:
-    plain += "+"
-
   plain = str_to_binlist(plain)
   key = str_to_binlist(key)
-  key = torch.Tensor(next(key)).unsqueeze(dim=0)
   
   ciphertext = list()
   for token in plain:
     token = torch.Tensor(token).unsqueeze(dim=0)
-    cipher = alice(torch.cat([token, key], dim=1))
+    K = torch.Tensor(next(key)).unsqueeze(dim=0)
+    cipher = alice(torch.cat([token, K], dim=1))
     ciphertext.append(cipher)
 
   return ciphertext
@@ -47,19 +50,19 @@ def decrypt(cipher: List[torch.Tensor], key: str, modelpaths: str = None):
   _, bob, _ = load_models(modelpaths)
 
   key = str_to_binlist(key)
-  key = torch.Tensor(next(key)).unsqueeze(dim=0)
   
   plaintext = list()
   for token in cipher:
-    plain = bob(torch.cat([token, key], dim=1))
+    K = torch.Tensor(next(key)).unsqueeze(dim=0)
+    plain = bob(torch.cat([token, K], dim=1))
     plaintext.append(plain)
 
   return plaintext
 
 
-def decode(plaintext):
+def decode(plaintext, **kwargs):
   plaintext = [ token.reshape(token.shape[1]).tolist() for token in plaintext ]
-  return binlist_to_str(plaintext).replace("+", " ")
+  return binlist_to_str(plaintext, **kwargs)
 
 
 def load_models(modelpaths: str = None, set_eval: bool = True) -> Tuple[torch.nn.Module]:

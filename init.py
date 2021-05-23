@@ -5,6 +5,7 @@ from sys import argv
 from config import build_config, defaults
 
 from src import trainer, test
+from src.util.binary import str_to_bintensor
 
 
 def main():
@@ -30,13 +31,23 @@ def main():
     test.evaluate()
 
   if actions.__contains__("encrypt"):
-    K = ''.join(random.choices(string.ascii_uppercase + string.digits, 
-      k = defaults[defaults["model"]]["blocksize"]
-    ))
-    C = test.encrypt(input("Text: "), K)
-  if actions.__contains__("decrypt"):      
-    P = test.decrypt(C, K)
-    print("Decrypted:", test.decode(P))
+    P = input("Text: ")
+    K = test.keygen()
+    C = test.encrypt(P, K)
+
+    if actions.__contains__("decrypt"):
+      D = test.decrypt(C, K)
+      print("Decrypted:", test.decode(D))
+      test.evaluate_manual(P, D)
+    else:
+      print("Encrypted:", test.decode(C, digest="hex"))
+      print("Key:", K)
+
+  if actions.__contains__("decrypt") and not actions.__contains__("encrypt"):
+    C = input("Cipher: ")
+    K = input("Key: ")
+    D = test.decrypt(str_to_bintensor(C, encoding="hex"), K)
+    print("Decrypted:", test.decode(D))
   
 if __name__ == "__main__":
   main()
