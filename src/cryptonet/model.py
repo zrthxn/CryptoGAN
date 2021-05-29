@@ -97,10 +97,8 @@ class AttackerNetwork(nn.Module):
     self.entry = nn.Identity(blocksize * 3)
 
     self.fc1 = nn.Linear(in_features=blocksize * 3, out_features=blocksize * 6)
-    self.fc2 = nn.Linear(in_features=blocksize * 6, out_features=blocksize * 4)
-    self.fc3 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
-    self.fc4 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
-    self.fc5 = nn.Linear(in_features=blocksize, out_features=2)
+    self.fc2 = nn.Linear(in_features=blocksize * 6, out_features=blocksize)
+    self.fc3 = nn.Linear(in_features=blocksize, out_features=2)
 
   def forward(self, inputs):
     inputs = self.entry(inputs)
@@ -112,12 +110,6 @@ class AttackerNetwork(nn.Module):
     inputs = torch.relu(inputs)
 
     inputs = self.fc3(inputs)
-    inputs = torch.relu(inputs)
-
-    inputs = self.fc4(inputs)
-    inputs = torch.relu(inputs)
-
-    inputs = self.fc5(inputs)
     inputs = torch.softmax(inputs, dim=1)
 
     return inputs

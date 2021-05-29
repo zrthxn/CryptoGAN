@@ -49,7 +49,7 @@ class TrainingSession():
     self.PlainB = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
-    self.logdir = f'training/cryptonet/'
+    self.logdir = f'training/cryptonet_anc/'
     self.writer = SummaryWriter(log_dir=path.join(self.logdir, defaults["training"]["run"])) if not debug else None
 
   def log(self, *ip):

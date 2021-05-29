@@ -12,8 +12,6 @@ from src.anc.datagen import PlainGenerator
 from src.anc.model import KeyholderNetwork, AttackerNetwork
 
 
-VERSION = '1.0'
-
 class TrainingSession():
   def __init__(self, debug = False, 
       BLOCKSIZE = defaults["anc"]["blocksize"], 
@@ -40,7 +38,7 @@ class TrainingSession():
     self.Plain = PlainGenerator(BLOCKSIZE, BATCHLEN)
 
     self.debug = debug
-    self.logdir = f'training/anc_v{VERSION}/'
+    self.logdir = f'training/anc/'
     self.writer = SummaryWriter(log_dir=path.join(self.logdir, defaults["training"]["run"])) if not debug else None
 
   def log(self, *ip):
