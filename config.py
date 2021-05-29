@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 defaults = {
-    "avail_models": ["anc", "cryptonet"],
+    "avail_models": ["anc", "cryptonet", "cryptonet_anc"],
     "model": "anc",
     "debug": False,
     "tensorboard": False,
@@ -25,6 +25,14 @@ defaults = {
     
     # Default config options for Cryptonet
     "cryptonet": {
+        "blocksize": 16,
+        "batchlen": 64,
+        "alice_lr": 0.001,
+        "eve_lr": 0.001,
+    },
+
+    # Default config options for Cryptonet+ANC
+    "cryptonet_anc": {
         "blocksize": 16,
         "batchlen": 64,
         "alice_lr": 0.001,

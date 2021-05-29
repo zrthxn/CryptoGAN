@@ -47,7 +47,7 @@ class TrainingSession():
 
   # Training loop
   def train(self, BATCHES, EPOCHS):
-    print(f'ANC Model v{VERSION}')
+    print(f'ANC Model')
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice = torch.optim.Adam(ab_params, lr=defaults["anc"]["alice_lr"])
     opt_eve = torch.optim.Adam(self.eve.parameters(), lr=defaults["anc"]["eve_lr"])

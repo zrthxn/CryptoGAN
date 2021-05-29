@@ -32,7 +32,7 @@ class KeyholderNetwork(nn.Module):
 
     self.fc1 = nn.Linear(in_features=blocksize * 2, out_features=blocksize * 4)
     self.fc2 = nn.Linear(in_features=blocksize * 4, out_features=blocksize * 2)
-    self.fc3 = nn.Linear(in_features=blocksize * 2, out_features=blocksize)
+    self.fc3 = nn.Linear(in_features=blocksize, out_features=blocksize)
     
     # self.norm = nn.BatchNorm1d(num_features=blocksize)
     

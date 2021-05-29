@@ -57,7 +57,7 @@ class TrainingSession():
       print(*ip)
 
   def train(self, BATCHES = 256, EPOCHS = 16):
-    print(f'Cryptonet Model v{VERSION}')
+    print(f'Cryptonet Model')
     ab_params = itertools.chain(self.alice.parameters(), self.bob.parameters())
     opt_alice_bob = torch.optim.Adam(ab_params, lr=defaults["cryptonet"]["alice_lr"], weight_decay=1e-5)
     opt_eve = torch.optim.Adam(self.eve.parameters(), lr=defaults["cryptonet"]["eve_lr"])

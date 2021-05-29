@@ -9,6 +9,7 @@ from config import defaults
 from src.util.binary import binlist_to_str, str_to_binlist
 from src.anc.model import KeyholderNetwork as ANCKeyholder, AttackerNetwork as ANCAttacker
 from src.cryptonet.model import KeyholderNetwork as CNKeyholder, AttackerNetwork as CNAttacker
+from src.cryptonet_anc.model import KeyholderNetwork as CNAKeyholder, AttackerNetwork as CNAAttacker
 
 
 keygen = lambda: ''.join(random.choices(string.ascii_letters + string.digits, k = defaults[defaults["model"]]["blocksize"]))
@@ -90,6 +91,10 @@ def load_models(modelpaths: str = None, set_eval: bool = True) -> Tuple[torch.nn
     alice = CNKeyholder(blocksize=config["blocksize"], name="Alice")
     bob = CNKeyholder(blocksize=config["blocksize"], name="Bob")
     eve = CNAttacker(blocksize=config["blocksize"], name="Eve")
+  elif defaults["model"] == "cryptonet_anc":
+    alice = CNAKeyholder(blocksize=config["blocksize"], name="Alice")
+    bob = CNAKeyholder(blocksize=config["blocksize"], name="Bob")
+    eve = CNAAttacker(blocksize=config["blocksize"], name="Eve")
 
   alice.load_state_dict(torch.load(alicepath))
   bob.load_state_dict(torch.load(bobpath))

@@ -5,6 +5,7 @@ from datetime import datetime
 from config import defaults
 from src.anc import training as ancTrainer
 from src.cryptonet import training as cryptonetTrainer
+from src.cryptonet_anc import training as cryptonetANCTrainer
 
 
 def start(model, debug = defaults["debug"]):
@@ -21,10 +22,13 @@ def start(model, debug = defaults["debug"]):
   elif model == "cryptonet":
     # Cryptonet Training 
     session = cryptonetTrainer.TrainingSession(debug=debug)
+  elif model == "cryptonet_anc":
+    # Cryptonet+ANC Training 
+    session = cryptonetANCTrainer.TrainingSession(debug=debug)
 
-  # if defaults["tensorboard"]:
-  #   system(f"tensorboard --logdir {session.logdir} &")
-  trained = session.train(BATCHES=defaults["training"]["batches"], EPOCHS=defaults["training"]["epochs"])
+  trained = session.train(
+    BATCHES=defaults["training"]["batches"], 
+    EPOCHS=defaults["training"]["epochs"])
   models, losses = trained
 
   modelpaths = save(model, models)
