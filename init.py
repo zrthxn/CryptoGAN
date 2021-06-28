@@ -8,10 +8,9 @@ from src.util.binary import str_to_bintensor
 
 def main():
   actions = list()
-  for i, arg in enumerate(argv[1:]):
+  for arg in argv[1:]:
     if arg.find("=") == -1:
       actions.append(arg)
-      argv.pop(i)
     else:
       continue
 
@@ -34,8 +33,10 @@ def main():
     C = test.encrypt(P, K)
 
     if actions.__contains__("decrypt"):
-      D = test.decrypt(C, K)
+      D, G = test.decrypt(C, K, witheve = actions.__contains__("eve"))
       print("Decrypted:", test.decode(D))
+      if actions.__contains__("eve"): 
+        print("Eve Guess:", test.decode(G))
       test.evaluate_manual(P, D)
     else:
       print("Encrypted:", C)

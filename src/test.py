@@ -47,18 +47,20 @@ def encrypt(plain: str, key: str, modelpaths: str = None):
   return ciphertext
 
 
-def decrypt(cipher: List[torch.Tensor], key: str, modelpaths: str = None):
-  _, bob, _ = load_models(modelpaths)
+def decrypt(cipher: List[torch.Tensor], key: str, witheve: bool = False, modelpaths: str = None):
+  _, bob, eve = load_models(modelpaths)
 
   key = next(str_to_binlist(key))
   
   plaintext = list()
+  guesstext = list()
   for token in cipher:
     K = torch.Tensor(key).unsqueeze(dim=0)
     plain = bob(torch.cat([token, K], dim=1))
     plaintext.append(plain)
+    guesstext.append(eve(token))
 
-  return plaintext
+  return plaintext, guesstext
 
 
 def decode(plaintext, **kwargs):

@@ -47,6 +47,8 @@ def build_config(argv: List[str]):
     config = dict()
 
     for arg in argv:
+        if arg.find("=") == -1:
+            continue
         name, value = arg.split("=")
         keys = name.split("-")
         
