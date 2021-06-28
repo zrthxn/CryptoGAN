@@ -35,12 +35,12 @@ def encrypt(plain: str, key: str, modelpaths: str = None):
   alice, _, _ = load_models(modelpaths)
 
   plain = str_to_binlist(plain)
-  key = str_to_binlist(key)
+  key = next(str_to_binlist(key))
   
   ciphertext = list()
   for token in plain:
     token = torch.Tensor(token).unsqueeze(dim=0)
-    K = torch.Tensor(next(key)).unsqueeze(dim=0)
+    K = torch.Tensor(key).unsqueeze(dim=0)
     cipher = alice(torch.cat([token, K], dim=1))
     ciphertext.append(cipher)
 
@@ -50,11 +50,11 @@ def encrypt(plain: str, key: str, modelpaths: str = None):
 def decrypt(cipher: List[torch.Tensor], key: str, modelpaths: str = None):
   _, bob, _ = load_models(modelpaths)
 
-  key = str_to_binlist(key)
+  key = next(str_to_binlist(key))
   
   plaintext = list()
   for token in cipher:
-    K = torch.Tensor(next(key)).unsqueeze(dim=0)
+    K = torch.Tensor(key).unsqueeze(dim=0)
     plain = bob(torch.cat([token, K], dim=1))
     plaintext.append(plain)
 

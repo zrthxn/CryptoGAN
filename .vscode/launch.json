@@ -13,6 +13,16 @@
         "train"
       ],
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Test Encrypt-Decrypt",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/init.py",
+      "args": [
+        "encrypt", "decrypt"
+      ],
+      "console": "integratedTerminal"
     }
   ]
 }
