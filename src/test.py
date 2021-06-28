@@ -28,7 +28,7 @@ def evaluate(modelpaths: str = None):
 def evaluate_manual(p: str, d: list):
   txt = [torch.Tensor(token).unsqueeze(dim=0) for token in str_to_binlist(p)]
   avg = array([torch.nn.MSELoss()(d[i], txt[i]).item() for i in range(len(txt))]).sum() / len(txt)
-  print('Reconstruction loss:', "{:.8f}".format(avg))
+  print('Reconstruction Error:', "{:.8f}".format(avg))
 
 
 def encrypt(plain: str, key: str, modelpaths: str = None):

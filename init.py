@@ -38,7 +38,8 @@ def main():
       print("Decrypted:", test.decode(D))
       test.evaluate_manual(P, D)
     else:
-      print("Encrypted:", test.decode(C, digest="hex"))
+      print("Encrypted:", C)
+      print("Encrypted (decoded):", test.decode(C, digest="hex"))
       print("Key:", K)
 
   if actions.__contains__("decrypt") and not actions.__contains__("encrypt"):
@@ -47,5 +48,7 @@ def main():
     D = test.decrypt(str_to_bintensor(C, encoding="hex"), K)
     print("Decrypted:", test.decode(D))
   
+  print()
+
 if __name__ == "__main__":
   main()
